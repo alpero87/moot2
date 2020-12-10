@@ -1,0 +1,120 @@
+<?php
+
+    include 'common.php';
+
+    $whom = false; $pass = false; $userCode = false;
+    $userCode = verifySignIn();
+    if (($userCode === false) || ($userCode < 2)) { header('Location: '. $fullPath); exit; }
+
+    include 'head_s.shtml';
+
+
+
+
+    $dbLink = openConn();
+    
+
+    $result = mysql_query('SELECT team_ID, student_ID1, student_ID2, school_ID FROM teams WHERE tourney = "' . $tourneyID . '" AND present="1" ORDER BY team_ID;', $dbLink);
+    for ($indx = 0; $indx < mysql_num_rows($result); $indx++)
+    { @mysql_data_seek($result, $indx); $data = mysql_fetch_row($result); $teams[$data[0]][0] = $data[1]; $teams[$data[0]][1] = $data[2]; $teams[$data[0]][2] = $data[3]; unset($data); }
+    @mysql_free_result($result);
+
+    $result = mysql_query('SELECT id, school FROM registration WHERE tourney = "' . $tourneyID . '" ORDER BY id;', $dbLink);
+    for ($indx = 0; $indx < mysql_num_rows($result); $indx++)
+    { @mysql_data_seek($result, $indx); $data = mysql_fetch_row($result); $schools[$data[0]] = $data[1]; unset($data); }
+    @mysql_free_result($result);
+
+    $result = mysql_query('SELECT name, student_ID FROM participants WHERE tourney = "' . $tourneyID . '";', $dbLink);
+    for ($indx = 0; $indx < mysql_num_rows($result); $indx++)
+    { @mysql_data_seek($result, $indx); $data = mysql_fetch_row($result); $ejudi[$data[1]] = $data[0]; unset($data); }
+    @mysql_free_result($result);
+
+    $result = mysql_query('SELECT data FROM preferences WHERE tourney = "' . $tourneyID . '" AND dataKey = "prelimRounds";', $dbLink);
+    $data = mysql_fetch_row($result); $prelimCount = $data[0]; unset($data); @mysql_free_result($result);
+    $maxSize = intval($prelimCount * 150 + 150); $maxWide = intval($prelimCount + 1);
+
+ ?>
+
+
+ <table border="0" width="<?php echo $maxSize; ?>" cellspacing="1em" style="margin-top:.5em;">
+ <col width="150" /><?php
+ 
+        for ($indx = 1; $indx <= $prelimCount; $indx++)
+        { echo '<col width="200" />'; }
+ 
+ ?>
+
+ <tr>
+ <td width="<?php echo $maxSize; ?>" style="width:<?php echo $maxSize; ?>px;" colspan="<?php echo $maxWide; ?>"><div style="margin-bottom:1em;"><span class="blktext10"><a href="<?php echo $fullPathSA; ?>">Back to the admin page</a></span></div></td>
+ </tr>
+
+    
+ <tr>
+ <td width="<?php echo $maxSize; ?>" style="width:<?php echo $maxSize; ?>px;" colspan="<?php echo $maxWide; ?>"><div style="text-align:center;margin-top:2em;"><span class="redtext14"><em>Individual Participant Scores</em></span></div></td>
+ </tr>
+ <tr>
+ <td width="<?php echo $maxSize; ?>" height="1" style="height:1px;width:<?php echo $maxSize; ?>px;background-color:rgb(100,0,0);" colspan="<?php echo $maxWide; ?>"></td>
+ </tr>
+   <tr>
+    <td style="text-align:center;" colspan="<?php echo $maxWide; ?>"><p class="blktext12">The scores are listed in the following order: Knowledge, Response, Forensics, and Demeanor.<br />One judge per row.<br />Scores from Bye rounds are listed in the round for which a Bye was given.</p></div></td>
+   </tr>
+ <tr>
+ <td width="<?php echo $maxSize; ?>" height="1em" style="height:1em;width:<?php echo $maxSize; ?>px;background-color:transparent;" colspan="<?php echo $maxWide; ?>"></td>
+ </tr>
+ <tr>
+ <td  width="150" style="width:150px;"><div style="text-align:center;"><span class="redtext12">Participant</span></div></td>
+ <?php
+ 
+        for ($indx = 1; $indx <= $prelimCount; $indx++)
+        { echo '<td  width="150" style="width:150px;"><div style="text-align:center;"><span class="redtext12">Prelim Round ' . $indx . '</span></div></td>' . chr(13); }
+//        if ($byeRoundFlag) { echo '<td  width="150" style="width:150px;"><div style="text-align:center;"><span class="redtext12">Bye Round</span></div></td>' . chr(13); }
+ ?>
+ </tr>
+ <tr>
+ <td width="<?php echo $maxSize; ?>" height="1" style="height:1px;width:<?php echo $maxSize; ?>px;background-color:rgb(100,0,0);" colspan="<?php echo $maxWide; ?>"></td>
+ </tr>
+<?php
+    $rowIndx = 0; set_time_limit(2); $teamsCount = sizeof($teams);
+    foreach($teams as $key => $value)
+    {
+            $result1 = mysql_query('SELECT knowledge, response, forensics, demeanor, round, judge FROM scores WHERE tourney = "' . $tourneyID . '" AND student_ID = "' . $value[0] . '" ORDER BY round DESC, judge;', $dbLink);
+            $result2 = mysql_query('SELECT knowledge, response, forensics, demeanor, round, judge FROM scores WHERE tourney = "' . $tourneyID . '" AND student_ID = "' . $value[1] . '" ORDER BY round DESC, judge;', $dbLink);
+            $color = '';
+            echo '<tr' .  $color . '><td style="text-align:center;"><p class="blktext10">Team ' . $key . '<br />' . $ejudi[$value[0]] . '<br /><span class="pblktext10">' . $schools[$value[2]] . '</span>'; $lastJudge = -1; $lastRound = 0;
+
+            for($indx2 = 0; $indx2 < mysql_num_rows($result1); $indx2++)
+            {
+                @mysql_data_seek($result1, $indx2); $data2 = mysql_fetch_assoc($result1);
+                if ($lastRound != $data2['round']) { echo '</p></td><td style="text-align:center;"><p class="pblktext10">'; $lastRound = $data2['round']; }
+                $theTotal = intval($data2['knowledge'] + $data2['response'] + $data2['forensics'] + $data2['demeanor']);
+                echo 'J#' . $data2['judge'] . ': ' . $data2['knowledge'] . '-' . $data2['response'] . '-' . $data2['forensics'] . '-' . $data2['demeanor'] . ' (' . $theTotal . ')<br />';
+            }
+
+            echo '</p></td></tr>';
+
+            $color = ' style="background-color:rgb(225,225,225);"';
+            echo '<tr' .  $color . '><td style="text-align:center;"><p class="blktext10">Team ' . $key . '<br />' . $ejudi[$value[1]] . '<br /><span class="pblktext10">' . $schools[$value[2]] . '</span>'; $lastJudge = -1; $lastRound = 0;
+
+            for($indx2 = 0; $indx2 < mysql_num_rows($result2); $indx2++)
+            {
+                @mysql_data_seek($result2, $indx2); $data2 = mysql_fetch_assoc($result2);
+                if ($lastRound != $data2['round']) { echo '</p></td><td style="text-align:center;"><p class="pblktext10">'; $lastRound = $data2['round']; }
+                $theTotal = intval($data2['knowledge'] + $data2['response'] + $data2['forensics'] + $data2['demeanor']);
+                echo 'J#' . $data2['judge'] . ': ' . $data2['knowledge'] . '-' . $data2['response'] . '-' . $data2['forensics'] . '-' . $data2['demeanor'] . ' (' . $theTotal . ')<br />';
+            }
+
+            echo '</p></td></tr>'; set_time_limit(2);
+    }
+    @mysql_free_result($result);
+    
+    
+    
+    
+    @closeConn($dbLink);
+
+
+?>
+
+
+</table> 
+ </body></html>

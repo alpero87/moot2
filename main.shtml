@@ -1,0 +1,122 @@
+<?php
+        unset($_SESSION);
+        session_destroy();
+
+	if(array_key_exists('logoff', $_GET))
+	{
+		$_SERVER['PHP_AUTH_USER'] = null; $_SERVER['PHP_AUTH_PW'] = null;
+		unset($_SERVER['PHP_AUTH_USER']); unset($_SERVER['PHP_AUTH_PW']); header("HTTP/1.0 401 Unauthorized"); header('Location: 0.0.0.0'); exit;
+	}
+
+
+    include_once('./EwD3P7q2bRr7srwA/common.php');
+
+    include 'head_s.shtml';
+    
+/*
+
+	When you change over to the venue model, you can build the links on the page dynmically and include a link to their web site.
+
+*/
+
+$lastMode = error_reporting(0);
+// $checkport = fsockopen('localhost', '3306', $errnum, $errstr, 2); //The 2 is the time of ping in secs
+$lastMode = error_reporting($lastMode);
+
+	if (array_key_exists('bad', $_GET)) { $noConnect = true; $checkport = false; }
+
+?>
+
+ <table border="0" width="840" cellpadding="0" cellspacing="0" style="margin-top:25px;">
+ <col width="6" /><col width="200" /><col width="217" /><col width="417" />
+
+
+ <tr>
+    <td width="840" style="width:840px;background-color:transparent;height:1em;" colspan="4"></td>
+ </tr>
+
+
+   <tr>
+     <td width="6" style="width:6px;background-color:rgb(100,0,0);"></td>
+     <td width="834" style="width:834px;" colspan="3"><div style="margin-left:10px;"><span class="redtext14">AMCA Tournaments</span></div></td>
+   </tr>
+   <tr>
+     <td width="840" height="1" style="height:1px;width:840px;background-color:rgb(100,0,0);" colspan="4"></td>
+   </tr>
+   <tr>
+      <td width="840" style="width:840px;background-color:transparent;height:3px;" colspan="4"></td>
+   </tr>
+   <tr>
+        <td></td>
+        <td colspan="3">
+<?php
+
+
+//		national tournament date goes first
+		$dates = array('January 6-7, 2017', 'November 4-5, 2016', 'November 5-6, 2016', 'November 11-12, 2016', 'November 18-19, 2016', 'December 2-3, 2016');
+
+
+		if ((testConnection() !== false) && !$noConnect)
+		{
+			echo '<!--    ' . testConnection() . '    //-->' . chr(13);
+?>
+
+<!--<a href="eastern/">2016 Eastern Regional</a>&nbsp;&nbsp;&nbsp;(<?php echo $dates[4]; ?>)<br />-->
+
+            <p class="pblktext12" style="line-height:1.35em;">
+                <a href="midSouth/">Mid-South Regional</a></br>
+                <a href="rubberCity">Rubber City Regional</a></br>
+                <a href="midAtlantic">Mid-Atlantic Regional</a></br>
+                <a href="windyCity">Windy City Regional</a></br>
+                <a href="greatLakes">Great Lakes Regional</a></br>
+                <a href="southAtlantic">South Atlantic Regional</a></br>
+                <a href="southEast">South East Regional</a></br>
+                <a href="southTexas">South Texas Regional</a></br>
+                <a href="atchafalaya">Atchafalaya Regional</a></br>
+                <a href="eastern">Eastern Regional</a></br>
+                <a href="midWest">Midwest Regional</a></br>
+                <a href="southCentral">South Central Regional</a></br>
+                <a href="empireState">Empire State Regional</a></br>
+                <a href="newEngland">New England Regional</a></br>
+                <a href="upperMidwest">Upper Midwest Regional</a></br>
+                <a href="western">Western Regional</a></br>
+            </p>
+                
+            <p class="pblktext12" style="line-height:1.35em;">
+                <a href="national">National Tournament</a></br>
+            </p>
+            
+            <p class="pblktext12" style="line-height:1.35em;">
+                <a href="invitational">Invitational Tournament</a></br>
+                <a href="invitational1">Invitational1 Tournament</a></br>
+                <a href="invitational2">Invitational2 Tournament</a></br>
+                <a href="tumca">TUMCA Tournament</a></br>
+            </p>
+              
+<?php
+		}
+		else
+		{
+?>
+                <p class="blktext14" style="color:red;"><b>CRITICAL ALERT: MySQL is not running.</b></p>
+<?php
+		}
+//		if (!$checkport) { echo '                <p class="blktext12"><b>ALERT: Port 3306 appears closed.</b></p>'; }
+?>
+        </td>
+   </tr>
+
+
+
+
+
+ <tr>
+    <td width="840" style="width:840px;background-color:transparent;height:2em;" colspan="4"></td>
+ </tr>
+
+
+
+ </table>
+
+
+<?php include 'foot.shtml'; ?>

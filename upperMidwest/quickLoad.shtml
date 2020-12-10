@@ -1,0 +1,135 @@
+<?php
+
+    include 'common.php';
+
+    if ($_SERVER['SERVER_PORT'] != 443) { header('Location: ' . $serverPathS . $_SERVER['REQUEST_URI']); exit(); }
+
+
+    $flag = false;
+        if (isset($_POST['validated']))
+        {
+            if ( ($_POST['validated'] == 1) && (is_uploaded_file($_FILES['teams']['tmp_name'])) && (is_uploaded_file($_FILES['schools']['tmp_name'])) && (is_uploaded_file($_FILES['people']['tmp_name'])) )
+            {
+
+                $schools = file($_FILES['schools']['tmp_name']);
+                if (sizeof($schools) == 1) { echo 'Your schools data may be saved incorrectly. Rows should end with CR+LF.'; exit; }
+                $data = explode(',', $schools[0]);
+                if (sizeof($data) != 3) { echo 'Your schools data appears to have the wrong number of columns.'; exit; }
+                
+                $people = file($_FILES['people']['tmp_name']);
+                if (sizeof($people) == 1) { echo 'Your participant data may be saved incorrectly. Rows should end with CR+LF.'; exit; }
+                $data = explode(',', $people[0]);
+                if (sizeof($data) != 4) { echo 'Your participant data appears to have the wrong number of columns.'; exit; }
+                
+                $teams = file($_FILES['teams']['tmp_name']);
+                if (sizeof($teams) == 1) { echo 'Your teams data may be saved incorrectly. Rows should end with CR+LF.'; exit; }
+                $data = explode(',', $teams[0]);
+                if (sizeof($data) != 6) { echo 'Your teams data appears to have the wrong number of columns.'; exit; }
+                
+
+
+
+                $dbLink = openConn();
+                @mysql_query('TRUNCATE TABLE registration;', $dbLink); @mysql_query('TRUNCATE TABLE participants;', $dbLink); @mysql_query('TRUNCATE TABLE teams;', $dbLink); @mysql_query('OPTIMIZE TABLES teams, participants, registration;', $dbLink);
+
+
+                for ($indx = 0; $indx < sizeof($schools); $indx++)
+                {
+                    $data = explode(',', $schools[$indx]);
+                    $job = 'INSERT INTO registration (tourney, id, school) VALUES("' . $data[0] . '", "' . $data[1] . '", "' . str_replace(chr(34), '', $data[2]) . '");';
+                    @mysql_query($job, $dbLink);
+                }
+                $result = mysql_query('SELECT COUNT(*) FROM registration;', $dbLink); $data = mysql_fetch_row($result); $schoolCount = $data[0]; unset($data); @mysql_free_result($result);
+
+
+                for ($indx = 0; $indx < sizeof($people); $indx++)
+                {
+                    $data = explode(',', $people[$indx]);
+                    $job = 'INSERT INTO participants (tourney, school_ID, student_ID, name) VALUES("' . $data[0] . '", "' . $data[1] . '", "' . $data[2] . '", "' . str_replace(chr(34), '', $data[3]) . '");';
+                    @mysql_query($job, $dbLink);
+                }
+                $result = mysql_query('SELECT COUNT(*) FROM participants;', $dbLink); $data = mysql_fetch_row($result); $kidCount = $data[0]; unset($data); @mysql_free_result($result);
+
+
+                for ($indx = 0; $indx < sizeof($teams); $indx++)
+                {
+                    $data = explode(',', $teams[$indx]);
+                    $job = 'INSERT INTO teams (tourney, present, team_ID, student_ID1, student_ID2, school_ID) VALUES("' . $data[0] . '", "' . $data[1] . '", "' . $data[2] . '", "' . $data[3] . '", "' . $data[4] . '", "' . $data[5] . '");';
+                    @mysql_query($job, $dbLink);
+                }
+                $result = mysql_query('SELECT COUNT(*) FROM teams;', $dbLink); $data = mysql_fetch_row($result); $teamCount = $data[0]; unset($data); @mysql_free_result($result);
+
+
+
+                @closeConn($dbLink); unset($teams); unset($people); unset($schools); $finished = true;
+            }
+        }
+
+    include 'head_s.shtml';
+
+    if ($finished) { $flag = true; }
+
+?>
+
+
+    <form enctype="multipart/form-data" action="<?php echo $serverPathS . $_SERVER['REQUEST_URI']; ?>" method="post"><input type="hidden" value="1" name="validated" id="validated" />
+ <table border="0" width="840" cellpadding="0" cellspacing="0" style="margin-top:25px;">
+ <col width="6" /><col width="200" /><col width="217" /><col width="417" />
+
+
+ <tr>
+ <td width="<?php echo $maxSize; ?>" style="width:<?php echo $maxSize; ?>px;" colspan="4"><div style="margin-bottom:1em;"><span class="blktext10"><a href="<?php echo $fullPath; ?>admin/">Back to the admin page</a></span></div></td>
+ </tr>
+
+
+   <tr>
+     <td width="6" style="width:6px;background-color:rgb(100,0,0);"></td>
+     <td width="834" style="width:834px;" colspan="3"><div style="margin-left:10px;"><span class="redtext14">Upload Data</span></div></td>
+   </tr>
+   <tr>
+     <td width="840" height="1" style="height:1px;width:840px;background-color:rgb(100,0,0);" colspan="4"></td>
+   </tr>
+   <tr>
+      <td width="840" style="width:840px;background-color:transparent;height:3px;" colspan="4"></td>
+   </tr>
+
+   <tr>
+        <td></td>
+        <td colspan="3">
+            <div style="margin-top:1em;">Schools data file: <input type="file" name="schools" id="schools" /></div>
+            <div style="margin-top:1em;">Participants data file: <input type="file" name="people" id="people" /></div>
+            <div style="margin-top:1em;">Teams data file: <input type="file" name="teams" id="teams" /><input style="margin-left:1em;" type="submit" name="save" id="save" value="Upload" /></div>
+        </td>
+   </tr>
+
+<?php
+
+        if ($flag)
+        {
+            echo '   <tr>';
+            echo '      <td width="840" style="width:840px;background-color:transparent;" colspan="4"><div style="margin-top:.75em;"></div></td>';
+            echo '   </tr>';
+            echo '   <tr>';
+            echo '     <td width="840" height="1" style="height:1px;width:840px;background-color:rgb(100,0,0);" colspan="4"></td>';
+            echo '   </tr>';
+            echo '   <tr>';
+            echo '      <td width="840" style="width:840px;background-color:transparent;" colspan="4"><div style="margin-top:.75em;"></div></td>';
+            echo '   </tr>';
+
+            echo '<tr><td colspan="4"><p class="blktext12">Results:</p><p class="blktext12">Schools imported: ' . $schoolCount . '</p><p class="blktext12">Participants imported: ' . $kidCount . '</p><p class="blktext12">Teams imported: ' . $teamCount . '</p></td></tr>';
+        }
+
+
+?>
+
+
+
+ <tr>
+    <td width="840" style="width:840px;background-color:transparent;height:2em;" colspan="4"></td>
+ </tr>
+
+
+ </table>
+    </form>
+
+<?php include 'foot.shtml'; ?>

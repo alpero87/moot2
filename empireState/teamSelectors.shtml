@@ -1,0 +1,217 @@
+<?php
+
+    include 'common.php';
+
+//    if ($_SERVER['SERVER_PORT'] != 443) { header('Location: ' . $serverPathS . $_SERVER['REQUEST_URI']); exit(); }
+
+    $userCode = verifySignIn();
+    if ($userCode === false) { exit('F'); }
+    if (($userCode === false) || ($userCode < 1)) { exit ($userCode); header('Location: '. $fullPath); exit; }
+
+    $dbLink = openConn();
+
+
+?><html>
+<head>
+<title>Select team for scoring</title>
+</head>
+
+<body>
+
+<div style="margin-bottom:1em;"><span class="blktext10"><a href="<?php echo $fullPathSA; ?>">Back to the admin page</a></span></div>
+
+<form action="<?php echo $fullPathSA;?>processor2.shtml" method="post"><input type="hidden" name="source" id="source" value="chooseTeams" />
+<p>By team: <select name="team" id="team"><?php
+
+    $result = mysql_query('SELECT corpus FROM texts WHERE tourney = "' . $tourneyID . '" AND id = "100";', $dbLink);
+    if (mysql_num_rows($result) == 1)
+    { $data = mysql_fetch_row($result); echo $data[0]; } else { echo '<option value="-1">Expected team data (TEXTS #100) not present</option>'; }
+    unset($data); @mysql_free_result($result);
+
+/*
+
+
+function GetRoundValue()
+{
+         global $dbLink, $dbSelected, $round;
+         $result = mysql_query('SELECT data FROM preferences WHERE dataKey = "currentRound";', $dbLink);
+         if (mysql_affected_rows($dbLink) != 1)
+         { $answer = false; }
+         else
+         {  $data = mysql_fetch_row($result); $answer = $data[0]; unset($data); @mysql_free_result($result);  }
+         return $answer;         
+}
+
+
+
+
+        $dbLink = openConn();
+        $round = GetRoundValue();
+
+
+
+
+        $result = mysql_query('SELECT team_ID, student_ID1, student_ID2 FROM teams;', $dbLink);
+
+        for ($indx = 0; $indx < mysql_num_rows($result); $indx++)
+
+        {
+
+            @mysql_data_seek($result, $indx); $data = mysql_fetch_row($result);
+
+            if ($data[0] > 0) { $teamList[$data[0]][0] = trim($data[1]); $teamList[$data[0]][1] = trim($data[2]); } unset($data);
+
+        }
+
+        @mysql_free_result($result);
+
+        
+
+        
+
+
+        $result = mysql_query('SELECT team1, location, building_ID FROM rounds WHERE round ="' . $round . '" AND finished = "0";', $dbLink);
+
+        for ($indx = 0; $indx < mysql_num_rows($result); $indx++)
+
+        {
+
+            @mysql_data_seek($result, $indx); $data = mysql_fetch_row($result);
+
+            if ($data[0] > 0) { $teamsA[$indx] = sprintf('%03d', $data[0]) . ',' . trim($data[1]); } unset($data);
+
+        }
+
+        @mysql_free_result($result);
+
+        
+
+        
+
+        $result = mysql_query('SELECT team2, location, building_ID FROM rounds WHERE round ="' . $round . '" AND finished = "0";', $dbLink);
+
+        for ($indx = 0; $indx < mysql_num_rows($result); $indx++)
+
+        {
+
+            @mysql_data_seek($result, $indx); $data = mysql_fetch_row($result);
+
+            if ($data[0] > 0)
+
+            { $teamsB[$indx] = sprintf('%03d', $data[0]) . ',' . trim($data[1]) . ',' . trim($data[2]); }
+
+            else
+
+            { $teamsA[$indx] = substr($teamsA[$indx], 0, strpos($teamsA[$indx], ',')) . ',-1,-1'; }
+
+            unset($data);
+
+        }
+
+        @mysql_free_result($result);
+
+        
+
+        $teams = array_merge($teamsA, $teamsB); unset($teamsA); unset($teamsB); sort($teams);
+
+       
+
+        
+
+// block these        
+        
+        $result = mysql_query('SELECT team_ID, school_ID FROM teams;', $dbLink);
+
+        for ($indx = 0; $indx < mysql_num_rows($result); $indx++)
+
+        {
+
+            @mysql_data_seek($result, $indx); $data = mysql_fetch_row($result);
+
+            if ($data[0] > 0) { $teamSchool[$data[0]] = $data[1]; } unset($data);
+
+        }
+
+        @mysql_free_result($result);
+
+        
+
+        
+
+
+        $result = mysql_query('SELECT * FROM buildings ORDER BY id;', $dbLink);
+
+        for ($indx = 0; $indx < mysql_num_rows($result); $indx++)
+
+        {
+
+            @mysql_data_seek($result, $indx); $data = mysql_fetch_row($result);
+
+            $buildings[$data[0]][0] = trim($data[1]); $buildings[$data[0]][1] = trim($data[2]); unset($data);
+
+        }
+
+        @mysql_free_result($result);
+
+        
+
+
+        $result = mysql_query('SELECT id, building_ID, roomNumber FROM rooms ORDER BY id;', $dbLink);
+
+        for ($indx = 0; $indx < mysql_num_rows($result); $indx++)
+
+        {
+
+            @mysql_data_seek($result, $indx); $data = mysql_fetch_row($result);
+
+            $rooms[$data[0]][0] = trim($data[1]); $rooms[$data[0]][1] = trim($data[2]); unset($data);
+
+        }
+
+        @mysql_free_result($result);
+        
+
+// to here
+
+        $result = mysql_query('SELECT student_ID, name FROM participants ORDER BY student_ID;', $dbLink);
+        for ($indx = 0; $indx < mysql_num_rows($result); $indx++)
+
+        {
+
+            @mysql_data_seek($result, $indx); $data = mysql_fetch_row($result);
+
+            $players[$data[0]] = trim($data[1]); unset($data);
+
+        }
+
+        @mysql_free_result($result);
+
+       
+        
+        @closeConn($dbLink);
+        
+        
+        
+        
+        foreach($teams as $value)
+        {
+            $data = explode(',', $value);
+            if (array_key_exists(intval($data[0]), $teamList))
+            {   echo '<option value="' . $data[0] . '">T' . sprintf('%03d', $data[0]) . ': ' . $players[$teamList[0 + $data[0]][0]] . ' - '. $players[$teamList[0 + $data[0]][1]] . '</option>';   }
+        }
+
+*/
+?></select><input type="submit" name="action" id="action" value="Choose by team" style="margin-left:20px;" /></p>
+<p>By name: <select name="name" id="name"><?php
+
+    $result = mysql_query('SELECT corpus FROM texts WHERE tourney = "' . $tourneyID . '" AND id = "101";', $dbLink);
+    if (mysql_num_rows($result) == 1)
+    { $data = mysql_fetch_row($result); echo $data[0]; } else { echo '<option value="-1">Expected participant data (TEXTS #101) not present</option>'; }
+    unset($data); @mysql_free_result($result);
+
+?></select><input type="submit" name="action" id="action" value="Choose by name" style="margin-left:20px;" /></p>
+</form>
+
+
+</body>
+</html>

@@ -1,0 +1,209 @@
+<?php
+
+
+    include 'common.php';
+
+//    if ($_SERVER['SERVER_PORT'] != 443) { header('Location: ' . $serverPathS . $_SERVER['REQUEST_URI']); exit(); }
+
+    $userCode = verifySignIn();
+    if (($userCode === false) || ($userCode < 2)) { header('Location: '. $fullPathSA); exit; }
+
+    $dbLink = openConn();
+    $result = mysql_query('SELECT data FROM preferences WHERE dataKey = "currentRound" AND tourney = "' . $tourneyID . '";', $dbLink); $data = mysql_fetch_row($result); @mysql_free_result($result);
+    switch ($data[0])
+    {
+        case 0: { $theRound = 'Pre-Competition'; break; }
+        case 1: { $theRound = 'Final Round'; break; }
+        case 2: { $theRound = 'Semifinal Round'; break; }
+        case 3: { $theRound = 'Quarterfinal Round'; break; }
+        case 4: { $theRound = 'Round of Sixteen'; break; }
+        case -1: { $theRound = 'Preliminary Round I'; break; }
+        case -2: { $theRound = 'Preliminary Round II'; break; }
+        case -3: { $theRound = 'Preliminary Round III'; break; }
+        case -4: { $theRound = 'Preliminary Round IV'; break; }
+        case -5: { $theRound = 'Preliminary Round V'; break; }
+    }
+    $theRoundID = $data[0]; unset($data);
+
+    
+    if ($theRoundID != 0)
+    {
+        $result = mysql_query('SELECT team1, location FROM rounds WHERE round ="' . $theRoundID . '" AND tourney = "' . $tourneyID . '";', $dbLink);
+        for ($indx = 0; $indx < mysql_num_rows($result); $indx++)
+        {
+            @mysql_data_seek($result, $indx); $data = mysql_fetch_row($result);
+            if ($data[0] > 0) { $teamsA[$indx] = sprintf('%03d', $data[0]) . ',' . trim($data[1]); } unset($data);
+        }
+        @mysql_free_result($result);
+        
+        
+        $result = mysql_query('SELECT team2, location FROM rounds WHERE round ="' . $theRoundID . '" AND tourney = "' . $tourneyID . '";', $dbLink);
+        for ($indx = 0; $indx < mysql_num_rows($result); $indx++)
+        {
+            @mysql_data_seek($result, $indx); $data = mysql_fetch_row($result);
+            if ($data[0] > 0)
+            { $teamsB[$indx] = sprintf('%03d', $data[0]) . ',' . trim($data[1]); }
+            else
+            { $teamsA[$indx] = substr($teamsA[$indx], 0, strpos($teamsA[$indx], ',')) . ',-1'; }
+            unset($data);
+        }
+        @mysql_free_result($result);
+        
+        $teams = array_merge($teamsA, $teamsB); unset($teamsA); unset($teamsB); sort($teams);
+        
+
+        
+        $result = mysql_query('SELECT * FROM buildings WHERE tourney = "' . $tourneyID . '" ORDER BY id;', $dbLink);
+        for ($indx = 0; $indx < mysql_num_rows($result); $indx++)
+        {
+            @mysql_data_seek($result, $indx); $data = mysql_fetch_row($result);
+            $buildings[$data[0]][0] = trim($data[1]); $buildings[$data[0]][1] = trim($data[2]); unset($data);
+        }
+        @mysql_free_result($result);
+        
+        $result = mysql_query('SELECT id, building_ID, roomNumber FROM rooms WHERE tourney = "' . $tourneyID . '" ORDER BY id;', $dbLink);
+        for ($indx = 0; $indx < mysql_num_rows($result); $indx++)
+        {
+            @mysql_data_seek($result, $indx); $data = mysql_fetch_row($result);
+            $rooms[$data[0]][0] = trim($data[1]); $rooms[$data[0]][1] = trim($data[2]); unset($data);
+        }
+        @mysql_free_result($result);
+        
+        
+    }
+
+
+    @closeConn($dbLink);
+
+
+
+?>
+
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xml:lang="en-US" dir="ltr">
+
+<head dir="ltr">
+<meta http-equiv="content-type" content="text/html; charset=iso-8859-1;" />
+<title>ACMA - The University of Texas at Arlington</title>
+<meta name="Author" content="honors.uta.edu" />
+<meta name="Keywords" content="acma moot court mootcourt simulation court Supreme Court Simulation scholastic moot court court tournaments" />
+<meta name="Description" content="infomation about moot courts or mootcourts also known as mock supreme courts or simulation courts" />
+<meta name="distribution" content="global" />
+<meta name="resource-type" content="document" />
+<meta name="language" content="en" />
+
+<style type="text/css">
+
+<!--
+
+  .redcell { }
+  .redtext12 { font-family:arial,sans-serif;font-weight:bold;font-size:12px;color:rgb(100,0,0); }
+  .redtext14 { font-family:arial,sans-serif;font-weight:bold;font-size:14px;color:rgb(100,0,0); }
+  .redtext18 { font-family:arial,sans-serif;font-weight:bold;font-size:14px;color:rgb(100,0,0); }
+  .blktext12 { font-family:arial,sans-serif;font-weight:bold;font-size:12px;color:rgb(0,0,0); }
+  .blktext14 { font-family:arial,sans-serif;font-weight:bold;font-size:14px;color:rgb(0,0,0); }
+  .newLeftCol { text-align:right;width:206px; }
+  .newRightCol { text-align:left;width:634px; }
+  .scheduleLeftCol { text-align:right;width:206px; }
+  .scheduleRightCol { text-align:left;width:634px; }
+  .divT10L20 { margin-top:10px;margin-left:20px; }
+  .divL15T15 { margin-top:10px;margin-left:20px; }
+  .divL15T30 { margin-top:10px;margin-left:20px; }
+  .scheduleRight { text-align:right;margin-right:3px;margin-top:2px; }
+  .scheduleLeft  { text-align:left;margin-left:3px;margin-top:2px; }
+  body  { color: black; background-color:white; }
+  a { background-color:transparent;color:blue;text-decoration:none; }
+  a.visit { background-color:transparent;color:blue;text-decoration:none; }
+
+//-->
+
+</style>
+
+</head>
+
+
+
+<body>
+
+ 
+
+
+ <table border="0" width="840" cellpadding="0" cellspacing="0" style="margin-top:25px;">
+ <col width="6" /><col width="200" /><col width="217" /><col width="417" />
+ <tr>
+ <td width="840" style="width:840px;" colspan="4"><div style="text-align:center;"><span class="redtext18"><em><?php echo $theRound; ?></em></span></div></td>
+ </tr>
+ <tr>
+ <td width="840" height="1" style="height:1px;width:840px;background-color:rgb(100,0,0);" colspan="4"></td>
+ </tr>
+ <tr>
+ <td width="840" height="20" style="height:20px;width:840px;background-color:transparent;" colspan="4"></td>
+ </tr>
+ 
+ 
+ <tr>
+ <td width="840" style="width:840px;" colspan="4">
+ <div style="margin-left:1em;">
+    <table width="800" cellpadding="0" cellspacing="0" style="margin-top:10px;" border="0">
+    <col width="80" /><col width="120" /> <col width="80" /><col width="120" /> <col width="80" /><col width="120" /> <col width="80" /><col width="120" />
+<?php
+        $teamsCount = sizeof($teams); $locales = array('');
+        for ($indx = 0; $indx < $teamsCount; $indx++)
+        {
+            $data  = explode(',', trim($teams[$indx++])); $data2 = explode(',', trim($teams[$indx++])); $data3 = explode(',', trim($teams[$indx++])); $data4 = explode(',', trim($teams[$indx]));
+            
+            if ($data[1] != -1)
+            { if ($data[1] > 0)
+            { echo '<tr><td><span class="redtext14">Team ' . sprintf('%03d', $data[0]) . '</span></td><td><span class="blktext14">' . sprintf('%03d', $rooms[$data[1]][1]) . ' ' . $buildings[$rooms[$data[1]][0]][1] . '</span></td>';
+              if (!array_key_exists($buildings[$rooms[$data[1]][0]][1], $locales)) { $locales[$buildings[$rooms[$data[1]][0]][1]] = $buildings[$rooms[$data[1]][0]][0]; } } }
+            else
+            { echo '<tr><td><span class="redtext14">Team ' . sprintf('%03d', $data[0]) . '</span></td><td><span class="blktext14">Bye</span></td>'; }
+
+            if ($data2[1] != -1)
+            { if ($data[1] > 0)
+            { echo '<td><span class="redtext14">Team ' . sprintf('%03d', $data2[0]) . '</span></td><td><span class="blktext14">' . sprintf('%03d', $rooms[$data2[1]][1]) . ' ' . $buildings[$rooms[$data2[1]][0]][1] . '</span></td>';
+              if (!array_key_exists($buildings[$rooms[$data2[1]][0]][1], $locales)) { $locales[$buildings[$rooms[$data2[1]][0]][1]] = $buildings[$rooms[$data2[1]][0]][0]; } } }
+            else
+            { echo '<td><span class="redtext14">Team ' . sprintf('%03d', $data2[0]) . '</span></td><td><span class="blktext14">Bye</span></td>'; }
+
+            if ($data3[1] != -1)
+            { if ($data3[1] > 0)
+            { echo '<td><span class="redtext14">Team ' . sprintf('%03d', $data3[0]) . '</span></td><td><span class="blktext14">' . sprintf('%03d', $rooms[$data3[1]][1]) . ' ' . $buildings[$rooms[$data3[1]][0]][1] . '</span></td>';
+              if (!array_key_exists($buildings[$rooms[$data3[1]][0]][1], $locales)) { $locales[$buildings[$rooms[$data3[1]][0]][1]] = $buildings[$rooms[$data3[1]][0]][0]; } } }
+            else
+            { echo '<td><span class="redtext14">Team ' . sprintf('%03d', $data3[0]) . '</span></td><td><span class="blktext14">Bye</span></td>'; }
+
+            if ($data4[1] != -1)
+            { if ($data4[1] > 0) 
+            { echo '<td><span class="redtext14">Team ' . sprintf('%03d', $data4[0]) . '</span></td><td><span class="blktext14">' . sprintf('%03d', $rooms[$data4[1]][1]) . ' ' . $buildings[$rooms[$data4[1]][0]][1] . '</span></td>';
+              if (!array_key_exists($buildings[$rooms[$data4[1]][0]][1], $locales)) { $locales[$buildings[$rooms[$data4[1]][0]][1]] = $buildings[$rooms[$data4[1]][0]][0]; } } }
+            else
+            { echo '<td><span class="redtext14">Team ' . sprintf('%03d', $data4[0]) . '</span></td><td><span class="blktext14">Bye</span></td></tr>'; }
+
+            echo '<tr><td style="height:5px;" colspan="4"></td></tr>' . chr(13);
+
+        }
+        
+        
+        echo '<tr><td style="height:20px;" colspan="4"></td></tr>' . chr(13);
+        $indx = 0;
+        foreach($locales as $key => $value)
+        {
+            if ($indx == 0) { echo '<tr>' . chr(13); }            
+            if ($value != '') { echo '<td colspan="2"><span class="redtext14">' . trim($key) . ' = ' . trim($value) . '</td>'; }
+            if (++$indx == 4) { echo '</tr>' . chr(13); $indx = 0; }
+        }
+?>        
+    </table>
+ </div></td></tr>
+
+
+
+
+
+   <tr>
+     <td width="840" height="20" style="height:20px;width:840px;background-color:transparent;" colspan="4"></td>
+   </tr>
+</table> 
+ 

@@ -1,0 +1,286 @@
+<?php
+
+    include 'common.php';
+
+    $whom = false; $pass = false; $userCode = false; $hideJudges = 'display:none;';
+    $userCode = verifySignIn();
+    if (($userCode === false) || ($userCode == 1)) { header('Location: '. $fullPath); exit; }
+
+    include 'head_s.shtml';
+
+
+
+
+    $dbLink = openConn();
+    $result = mysql_query('SELECT data FROM preferences WHERE dataKey = "currentRound" AND tourney="' . $tourneyID . '";', $dbLink); $data = mysql_fetch_row($result); @mysql_free_result($result);
+    $theRoundID = $data[0]; unset($data);
+
+    $result = mysql_query('SELECT data FROM preferences WHERE dataKey = "prelimRounds" AND tourney="' . $tourneyID . '";', $dbLink);
+    $data = mysql_fetch_row($result); @mysql_free_result($result); $prelimCount = $data[0]; unset($data);
+    
+    $result = mysql_query('SELECT data FROM preferences WHERE dataKey = "finalRounds" AND tourney="' . $tourneyID . '";', $dbLink);
+    $data = mysql_fetch_row($result); @mysql_free_result($result); $finalCount = $data[0]; unset($data);
+    
+    $result = mysql_query('SELECT data FROM preferences WHERE dataKey = "useVerify" AND tourney="' . $tourneyID . '";', $dbLink);
+    $data = mysql_fetch_row($result); @mysql_free_result($result); $verifyFlag = $data[0]; unset($data);
+    
+    
+    $teamA = false; $teamB = false;
+    if (isset($_POST['teamA'])) { $teamA = $_POST['teamA']; }
+    if (isset($_POST['teamB'])) { $teamB = $_POST['teamB']; }
+    if (isset($_GET['teamA'])) { $teamA = $_GET['teamA']; }
+    if (isset($_GET['teamB'])) { $teamB = $_GET['teamB']; }
+
+
+    if (isset($_POST['job'])) { $job = $_POST['job']; } else { $job = 0; }
+    if ($job > 0)
+    {
+        $teamid = $_POST['teamSelect']; $rndID = $_POST['tourneyRound']; if ($rndID != 0) { $theRoundID = $rndID; }
+        $result = mysql_query('SELECT * FROM rounds WHERE (team1 = "' . $teamid . '" OR team2 = "' . $teamid . '") AND tourney = "' . $tourneyID . '" AND round = "' . $theRoundID . '";', $dbLink);
+        $data = mysql_fetch_assoc($result); $teamA = $data['team1']; $teamB = $data['team2']; unset($data); @mysql_free_result($result);
+        $hideJudges = '';
+    }
+
+
+    if ($theRoundID != 0)
+    {
+        
+        $result = mysql_query('SELECT student_ID1, student_ID2 FROM teams WHERE team_ID = "' . $teamA . '" AND tourney="' . $tourneyID . '";', $dbLink);
+        $data = mysql_fetch_row($result); $teams[$teamA][0] = $data[0]; $teams[$teamA][1] = $data[1]; @mysql_free_result($result); unset($data);
+        
+        $result = mysql_query('SELECT student_ID1, student_ID2 FROM teams WHERE team_ID = "' . $teamB . '" AND tourney="' . $tourneyID . '";', $dbLink);
+        $data = mysql_fetch_row($result); $teams[$teamB][0] = $data[0]; $teams[$teamB][1] = $data[1]; @mysql_free_result($result); unset($data);
+        
+        $result = mysql_query('SELECT COUNT(DISTINCT judge) FROM scores WHERE round = "' . $theRoundID . '" AND (team_ID = "' . $teamA . '" OR team_ID = "' . $teamB . '") AND tourney = "' . $tourneyID . '";', $dbLink);
+        $data = mysql_fetch_row($result); $judgeCount = $data[0]; @mysql_free_result($result); unset($data);
+        
+        $result = mysql_query('SELECT finished FROM rounds WHERE round = "' . $theRoundID . '" AND ((team1 = "' . $teamA . '" AND team2 = "' . $teamB . '") OR (team2 = "' . $teamA . '" AND team1 = "' . $teamB . '")) AND tourney = "' . $tourneyID . '";', $dbLink);
+        $data = mysql_fetch_row($result); $finishedFlag = $data[0]; @mysql_free_result($result); unset($data);
+        
+        
+        $result = mysql_query('SELECT student_ID, name FROM participants WHERE tourney="' . $tourneyID . '";', $dbLink);
+        for ($indx = 0; $indx < mysql_num_rows($result); $indx++)
+        {
+            @mysql_data_seek($result, $indx); $data = mysql_fetch_row($result);
+            $people[$data[0]] = trim($data[1]); unset($data);
+        }
+        @mysql_free_result($result);
+        
+    }
+
+
+
+    switch ($theRoundID)
+    {
+        case 0: { $theRound = 'Pre-Competition'; break; }
+        case 1: { $theRound = 'Final Round'; break; }
+        case 2: { $theRound = 'Semifinal Round'; break; }
+        case 3: { $theRound = 'Quarterfinal Round'; break; }
+        case 4: { $theRound = 'Round of Sixteen'; break; }
+        case 5: { $theRound = 'Round of Thirty-Two'; break; }
+        case 6: { $theRound = 'Round of Sixty-Four'; break; }
+        case -1: { $theRound = 'Preliminary Round I'; break; }
+        case -2: { $theRound = 'Preliminary Round II'; break; }
+        case -3: { $theRound = 'Preliminary Round III'; break; }
+        case -4: { $theRound = 'Preliminary Round IV'; break; }
+        case -5: { $theRound = 'Preliminary Round V'; break; }
+    }
+
+
+    $result = mysql_query('SELECT corpus FROM texts WHERE tourney = "' . $tourneyID . '" AND id = "100";', $dbLink); $data = mysql_fetch_row($result); $byTeamsData = $data[0]; unset($data); @mysql_free_result($result);
+
+
+    @closeConn($dbLink);
+
+
+function make_seed()
+{
+    list($usec, $sec) = explode(' ', microtime());
+    return (float) $sec + ((float) $usec * 100000);
+}
+
+mt_srand(make_seed());
+
+
+?>
+
+
+  <script type="text/javascript">
+  <!--
+                
+        function doHide(arg1)
+        {
+            if (document.getElementById)
+            { theObject = document.getElementById(arg1); theObject.style.display = 'none';  }
+            else
+            {  alert('Not available'); }
+            return true;
+        }
+
+
+        function doShow(arg1)
+        {
+            if (document.getElementById)
+            { theObject = document.getElementById(arg1);  theObject.style.display = ''; }
+            else
+            {  alert('Not available'); }
+            return true;
+        }
+
+
+        function showBoxes()
+        {
+            if (document.getElementById)
+            {
+                theObject = document.getElementById('judgeCount'); maxJ = theObject.value; ++maxJ; btns = document.getElementById('saveBtns'); btns.style.display = 'none';
+                for (indx=1; indx < maxJ; indx++)  { scoreForm = document.getElementById('judge' + indx); scoreForm.style.display = ''; }
+                for (indx=maxJ; indx < 21; indx++)  { scoreForm = document.getElementById('judge' + indx); scoreForm.style.display = 'none'; }
+                if (maxJ > 1) { btns.style.display = ''; }
+            }
+            else
+            {  alert('Not available'); }
+            return true;
+        }
+
+//  -->
+  </script>
+
+
+
+ <table border="0" width="840" cellpadding="0" cellspacing="0" style="margin-top:25px;">
+ <col width="6" /><col width="200" /><col width="217" /><col width="417" />
+ <tr>
+ <td width="840" style="width:840px;" colspan="4"><div style="text-align:center;"><span class="redtext18"><em><?php echo $theRound; ?></em></span></div></td>
+ </tr>
+ <tr>
+ <td width="840" height="1" style="height:1px;width:840px;background-color:rgb(100,0,0);" colspan="4"></td>
+ </tr>
+ 
+ 
+ <tr>
+ <td width="840" style="width:840px;" colspan="4"><div style="margin-bottom:1em;"><span class="blktext10"><a href="<?php echo $fullPathSA; ?>">Back to the admin page</a></span></div></td>
+ </tr>
+ <tr>
+ <td width="840" style="width:840px;" colspan="4">
+ <div style="margin-left:4em;"><form action="verifyScores.shtml" method="post">
+    <table width="650" cellpadding="0" cellspacing="0" style="margin-top:10px;" border="0">
+    <col width="100" /><col width="100" /><col width="100" /><col width="50" /><col width="100" /><col width="100" /><col width="100" />
+        <tr><td colspan="7" height="20" style="height:25px;width:650px;background-color:transparent;"></td></tr>
+        <tr><td colspan="7"><div style="margin-bottom:1em;"><p class="blktext14">Enter the scores in the order that they appear on the score sheet: Knowledge, Response, Forensics and Demeanor.</p><p class="pblktext12">Warning: If the first score for all four participants for Judge #1 is 0, then the scores for that judge will not be recorded.</p></div></td></tr>
+        <tr><td colspan="7"><p class="blktext14">By team: <select name="teamSelect" id="teamSelect"><?php echo $byTeamsData; ?></select><input type="hidden" name="job" id="job" value="1" /><input style="margin-left:1em;" type="submit" value="Choose team" /></p></td></tr>
+        <tr><td colspan="7"><p class="blktext14">Select the tournament round: <select name="tourneyRound" id="tourneyRound"><?php
+        
+            if ($prelimCount >= 1) { echo '<option value="-1"';   if ($theRoundID == -1) { echo ' selected="selected"'; }    echo '>Prelim Round I</option>'; }
+            if ($prelimCount >= 2) { echo '<option value="-2"';   if ($theRoundID == -2) { echo ' selected="selected"'; }    echo '>Prelim Round II</option>'; }
+            if ($prelimCount >= 3) { echo '<option value="-3"';   if ($theRoundID == -3) { echo ' selected="selected"'; }    echo '>Prelim Round III</option>'; }
+            if ($prelimCount >= 4) { echo '<option value="-4"';   if ($theRoundID == -4) { echo ' selected="selected"'; }    echo '>Prelim Round IV</option>'; }
+            if ($prelimCount == 5) { echo '<option value="-5"';   if ($theRoundID == -5) { echo ' selected="selected"'; }    echo '>Prelim Round V</option>'; }
+            echo '<option value="0">- - - - - - - - -</option>';
+            if ($finalCount == 6) { echo '<option value="6"';   if ($theRoundID == 6) { echo ' selected="selected"'; }    echo '>Round of Sixty-Four</option>'; }
+            if ($finalCount >= 5) { echo '<option value="5"';   if ($theRoundID == 5) { echo ' selected="selected"'; }    echo '>Round of Thirty-Two</option>'; }
+            if ($finalCount >= 4) { echo '<option value="4"';   if ($theRoundID == 4) { echo ' selected="selected"'; }    echo '>Round of Sixteen</option>'; }
+            if ($finalCount >= 3) { echo '<option value="3"';   if ($theRoundID == 3) { echo ' selected="selected"'; }    echo '>Quarterfinals</option>'; }
+            if ($finalCount >= 2) { echo '<option value="2"';   if ($theRoundID == 2) { echo ' selected="selected"'; }    echo '>Semifinals</option>'; }
+            if ($finalCount >= 1) { echo '<option value="1"';   if ($theRoundID == 1) { echo ' selected="selected"'; }    echo '>Final Round</option>'; }
+        
+        
+        ?></select></p></td></tr>
+    </table>
+ </form></div>
+ </td></tr>
+ 
+ 
+ <tr>
+ <td width="840" style="width:840px;" colspan="4">
+ <div style="margin-left:4em;">
+<form name="scoresEntry" id="scoresEntry" method="post" action="<?php echo $fullPathSA; ?>processor3.shtml">
+<input type="hidden" name="teamA" id="teamA" value="<?php echo $teamA; ?>" /><input type="hidden" name="teamB" id="teamB" value="<?php echo $teamB; ?>" />
+<input type="hidden" name="playerA" id="playerA" value="<?php echo $teams[$teamA][0]; ?>" /><input type="hidden" name="playerB" id="playerB" value="<?php echo $teams[$teamA][1]; ?>" />
+<input type="hidden" name="playerC" id="playerC" value="<?php echo $teams[$teamB][0]; ?>" /><input type="hidden" name="playerD" id="playerD" value="<?php echo $teams[$teamB][1]; ?>" />
+<input type="hidden" name="source" id="source" value="vScores" /><input type="hidden" name="theRound" id="theRound" value="<?php echo $theRoundID; ?>" />
+<p class="blktext14" style="<?php echo $hideJudges; ?>">Select the number of judges: <select name="judgeCount" id="judgeCount" onchange="showBoxes();"><option value="0">0</option><?php
+        
+            for ($indx = 1; $indx < 21; $indx++)
+            { echo '<option'; if ($judgeCount == $indx) { echo ' selected="selected"'; } echo ' value="' . $indx . '">' . $indx . '</option>'; }
+        
+        ?></select></p>
+
+<?php
+
+        if ($verifyFlag)
+        {
+            echo '<p class="blktext14"><input type="checkbox" value="';
+            if ($finishedFlag == 0) {echo '0'; } else { echo '1'; }
+            echo '" name="verifyFlag" id="verifyFlag" style="margin-right:1em;" /> Grades verified</p>';
+        }
+        else
+        {
+            echo '<input type="hidden" value="1" name="verifyFlag" id="verifyFlag" />';
+        }
+
+
+        $dbLink = openConn(); $haveScores = false;
+        $emptyData = array('knowledge' => '0', 'response' => '0', 'forensics' => '0', 'demeanor' => '0');
+        for($indx = 1; $indx < 21; $indx++)
+        {
+            $flag1 = true; $flag2 = true; $flag3 = true; $flag4 = true;
+            $result = mysql_query('SELECT * FROM scores WHERE student_ID = "' . $teams[$teamA][0] . '" AND judge = "' . $indx . '" AND team_ID = "' . $teamA . '" AND round = "' . $theRoundID . '" AND tourney = "' . $tourneyID . '";', $dbLink);
+            if (mysql_num_rows($result) == 1) { $dataA1 = mysql_fetch_assoc($result); $haveScores = true; } else { $flag1 = false; $dataA1 = $emptyData; } @mysql_free_result($result);
+            $result = mysql_query('SELECT * FROM scores WHERE student_ID = "' . $teams[$teamA][1] . '" AND judge = "' . $indx . '" AND team_ID = "' . $teamA . '" AND round = "' . $theRoundID . '" AND tourney = "' . $tourneyID . '";', $dbLink);
+            if (mysql_num_rows($result) == 1) { $dataA2 = mysql_fetch_assoc($result); $haveScores = true; } else { $flag2 = false; $dataA2 = $emptyData; } @mysql_free_result($result);
+            $result = mysql_query('SELECT * FROM scores WHERE student_ID = "' . $teams[$teamB][0] . '" AND judge = "' . $indx . '" AND team_ID = "' . $teamB . '" AND round = "' . $theRoundID . '" AND tourney = "' . $tourneyID . '";', $dbLink);
+            if (mysql_num_rows($result) == 1) { $dataB1 = mysql_fetch_assoc($result); $haveScores = true; } else { $flag3 = false; $dataB1 = $emptyData; } @mysql_free_result($result);
+            $result = mysql_query('SELECT * FROM scores WHERE student_ID = "' . $teams[$teamB][1] . '" AND judge = "' . $indx . '" AND team_ID = "' . $teamB . '" AND round = "' . $theRoundID . '" AND tourney = "' . $tourneyID . '";', $dbLink);
+            if (mysql_num_rows($result) == 1) { $dataB2 = mysql_fetch_assoc($result); $haveScores = true; } else { $flag4 = false; $dataB2 = $emptyData; } @mysql_free_result($result);
+?>
+ <div style="margin-left:4em;display:<?php
+ 
+    if ($flag1 == true || $flag2 == true || $flag3 == true || $flag4 == true) { echo ''; } else { echo 'none'; }
+ 
+ ?>;" id="judge<?php echo $indx; ?>" name="judge<?php echo $indx; ?>">
+    <table width="650" cellpadding="0" cellspacing="0" style="margin-top:10px;" border="0">
+    <col width="100" /><col width="100" /><col width="100" /><col width="50" /><col width="100" /><col width="100" /><col width="100" />
+
+        <tr><td colspan="7" height="20" style="height:25px;width:650px;background-color:transparent;"></td></tr>
+        <tr><td colspan="7"><div style="text-align:center;"><span class="blktext14" style="background-color:rgb(255,200,200);">Judge #<?php echo $indx; ?></span></div></td></tr>
+
+        <tr><td colspan="2"><div style="margin-top:10px;text-align:right;"><span class="redtext14">Team #<?php echo sprintf('%03d', $teamA); ?> </span></div></td><td colspan="5"></td></tr>
+        <tr><td colspan="2"><div style="text-align:right;"><span class="blktext14"><?php echo $people[$teams[$teamA][0]]; ?> :</td><td colspan="5"><input style="margin-left:15px;" type="text" name="<?php echo $indx; ?>A1" id ="<?php echo $indx; ?>A1" maxlength="3" size="5" value="<?php echo $dataA1['knowledge']; ?>" /><input style="margin-left:15px;" type="text" name="<?php echo $indx; ?>A2" id ="<?php echo $indx; ?>A2" maxlength="3" size="5" value="<?php echo $dataA1['response']; ?>" /><input style="margin-left:15px;" type="text" name="<?php echo $indx; ?>A3" id ="<?php echo $indx; ?>A3" maxlength="3" size="5" value="<?php echo $dataA1['forensics']; ?>" /><input style="margin-left:15px;" type="text" name="<?php echo $indx; ?>A4" id ="<?php echo $indx; ?>A4" maxlength="3" size="5" value="<?php echo $dataA1['demeanor']; ?>" /></span></div></td></tr>
+        <tr><td colspan="2"><div style="margin-top:7px;text-align:right;"><span class="blktext14"><?php echo $people[$teams[$teamA][1]]; ?> :</td><td colspan="5"><input style="margin-left:15px;" type="text" name="<?php echo $indx; ?>B1" id ="<?php echo $indx; ?>B1" maxlength="3" size="5" value="<?php echo $dataA2['knowledge']; ?>" /><input style="margin-left:15px;" type="text" name="<?php echo $indx; ?>B2" id ="<?php echo $indx; ?>B2" maxlength="3" size="5" value="<?php echo $dataA2['response']; ?>" /><input style="margin-left:15px;" type="text" name="<?php echo $indx; ?>B3" id ="<?php echo $indx; ?>B3" maxlength="3" size="5" value="<?php echo $dataA2['forensics']; ?>" /><input style="margin-left:15px;" type="text" name="<?php echo $indx; ?>B4" id ="<?php echo $indx; ?>B4" maxlength="3" size="5" value="<?php echo $dataA2['demeanor']; ?>" /></span></div></td></tr>
+
+        <tr><td colspan="2"><div style="margin-top:20px;text-align:right;"><span class="redtext14">Team #<?php echo sprintf('%03d', $teamB); ?> </span></div></td><td colspan="5"></td></tr>
+        <tr><td colspan="2"><div style="text-align:right;"><span class="blktext14"><?php echo $people[$teams[$teamB][0]]; ?> :</td><td colspan="5"><input style="margin-left:15px;" type="text" name="<?php echo $indx; ?>C1" id ="<?php echo $indx; ?>C1" maxlength="3" size="5" value="<?php echo $dataB1['knowledge']; ?>" /><input style="margin-left:15px;" type="text" name="<?php echo $indx; ?>C2" id ="<?php echo $indx; ?>C2" maxlength="3" size="5" value="<?php echo $dataB1['response']; ?>" /><input style="margin-left:15px;" type="text" name="<?php echo $indx; ?>C3" id ="<?php echo $indx; ?>C3" maxlength="3" size="5" value="<?php echo $dataB1['forensics']; ?>" /><input style="margin-left:15px;" type="text" name="<?php echo $indx; ?>C4" id ="<?php echo $indx; ?>C4" maxlength="3" size="5" value="<?php echo $dataB1['demeanor']; ?>" /></span></div></td></tr>
+        <tr><td colspan="2"><div style="margin-top:7px;text-align:right;"><span class="blktext14"><?php echo $people[$teams[$teamB][1]]; ?> :</td><td colspan="5"><input style="margin-left:15px;" type="text" name="<?php echo $indx; ?>D1" id ="<?php echo $indx; ?>D1" maxlength="3" size="5" value="<?php echo $dataB2['knowledge']; ?>" /><input style="margin-left:15px;" type="text" name="<?php echo $indx; ?>D2" id ="<?php echo $indx; ?>D2" maxlength="3" size="5" value="<?php echo $dataB2['response']; ?>" /><input style="margin-left:15px;" type="text" name="<?php echo $indx; ?>D3" id ="<?php echo $indx; ?>D3" maxlength="3" size="5" value="<?php echo $dataB2['forensics']; ?>" /><input style="margin-left:15px;" type="text" name="<?php echo $indx; ?>D4" id ="<?php echo $indx; ?>D4" maxlength="3" size="5" value="<?php echo $dataB2['demeanor']; ?>" /></span></div></td></tr>
+        
+    </table>
+ </div>
+
+
+<?php
+            unset($dataA1); unset($dataA2); unset($dataB1); unset($dataB2);
+        }
+        @closeConn($dbLink);
+?>
+ 
+ 
+ <div style="margin-left:4em;display:<?php if ($haveScores) { echo ''; } else { echo 'none'; } ?>" id="saveBtns">
+    <table width="650" cellpadding="0" cellspacing="0" style="margin-top:10px;" border="0">
+    <col width="100" /><col width="100" /><col width="100" /><col width="50" /><col width="100" /><col width="100" /><col width="100" />
+        <tr><td colspan="7" height="20" style="height:25px;width:650px;background-color:transparent;"></td></tr>
+        <tr><td colspan="7" style="text-align:center;"><input type="submit" onclick="return checkValues();" value="Save scores" /><input type="reset" value="Clear form" style="margin-left:3em;" /></td></tr>
+    </table>
+ </div>
+
+
+ </td></tr>
+
+
+
+
+
+   <tr>
+     <td width="840" height="20" style="height:20px;width:840px;background-color:transparent;" colspan="4"></td>
+   </tr>
+</table> 
+ 
+ </form></body></html>

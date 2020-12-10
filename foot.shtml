@@ -1,0 +1,15 @@
+ <table border="0" width="840" cellpadding="0" cellspacing="0">
+ <col width="840" />
+
+  <tr>
+   <td colspan="6" width="840" height="14" valign="bottom" style="background-color:rgb(100,0,0);color:white;width:840px;vertical-align:middle;"><div style="margin-top:5px;margin-bottom:5px;text-align:center;width:840px;"><span style="font-family:arial;font-weight:bold;font-size:10px;">Copyright &copy; 2003-<?php echo date('Y'); ?>, The American Mootcourt Association</span></div></td>
+  </tr>
+ </table>
+
+
+</body>
+
+
+
+</html>
+

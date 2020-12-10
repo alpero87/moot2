@@ -1,0 +1,188 @@
+<?php
+
+
+    include 'common.php';
+
+    if ($_SERVER['SERVER_PORT'] != 443) { header('Location: ' . $serverPathS . $_SERVER['REQUEST_URI']); exit(); }
+
+    $userCode = verifySignIn();
+    if (($userCode === false) || ($userCode < 2)) { header('Location: '. $fullPath); exit; }
+    $dbLink = openConn();
+    
+    $result = mysql_query('SELECT COUNT(*) FROM rounds WHERE tourney = "' . $tourneyID . '" AND location = "-1";', $dbLink);
+    if (mysql_num_rows($result) > 0) { $data = mysql_fetch_row($result); $byeRoundFlag = (($data[0] > 0) || false); unset($data); } else { $byeRoundFlag = false; }
+    @mysql_free_result($result);
+    
+
+?><?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xml:lang="en-US" dir="ltr">
+
+<head dir="ltr">
+<meta http-equiv="content-type" content="text/html; charset=iso-8859-1;" />
+<title>ACMA - The University of Texas at Arlington</title>
+<meta name="Author" content="honors.uta.edu" />
+<meta name="Keywords" content="acma moot court mootcourt simulation court Supreme Court Simulation scholastic moot court court tournaments" />
+<meta name="Description" content="infomation about moot courts or mootcourts also known as mock supreme courts or simulation courts" />
+<meta name="distribution" content="global" />
+<meta name="resource-type" content="document" />
+<meta name="language" content="en" />
+
+<style type="text/css">
+
+<!--
+
+  .redcell { }
+  .redtext12 { font-family:arial,sans-serif;font-weight:bold;font-size:12px;color:rgb(100,0,0); }
+  .redtext14 { font-family:arial,sans-serif;font-weight:bold;font-size:14px;color:rgb(100,0,0); }
+  .redtext18 { font-family:arial,sans-serif;font-weight:bold;font-size:14px;color:rgb(100,0,0); }
+  .pblktext10 { font-family:arial,sans-serif;font-weight:normal;font-size:10px;color:rgb(0,0,0); }
+  .pblktext12 { font-family:arial,sans-serif;font-weight:normal;font-size:12px;color:rgb(0,0,0); }
+  .blktext10 { font-family:arial,sans-serif;font-weight:bold;font-size:10px;color:rgb(0,0,0); }
+  .blktext12 { font-family:arial,sans-serif;font-weight:bold;font-size:12px;color:rgb(0,0,0); }
+  .blktext14 { font-family:arial,sans-serif;font-weight:bold;font-size:14px;color:rgb(0,0,0); }
+  .newLeftCol { text-align:right;width:206px; }
+  .newRightCol { text-align:left;width:634px; }
+  .scheduleLeftCol { text-align:right;width:206px; }
+  .scheduleRightCol { text-align:left;width:634px; }
+  .divT10L20 { margin-top:10px;margin-left:20px; }
+  .divL15T15 { margin-top:10px;margin-left:20px; }
+  .divL15T30 { margin-top:10px;margin-left:20px; }
+  .scheduleRight { text-align:right;margin-right:3px;margin-top:2px; }
+  .scheduleLeft  { text-align:left;margin-left:3px;margin-top:2px; }
+  body  { color: black; background-color:white; }
+  a { background-color:transparent;color:blue;text-decoration:none; }
+  a.visit { background-color:transparent;color:blue;text-decoration:none; }
+
+//-->
+
+</style>
+
+</head>
+
+
+
+<body><?php
+
+        if (isset($_GET['school'])) { $theSchool = $_GET['school']; }
+        if (isset($_GET['team'])) { $theTeam = $_GET['team']; }
+
+        $result = mysql_query('SELECT data FROM preferences WHERE tourney = "' . $tourneyID . '" AND dataKey = "prelimRounds";', $dbLink);
+        $data = mysql_fetch_row($result); $prelimCount = $data[0]; unset($data); @mysql_free_result($result);
+        $maxSize = intval($prelimCount * 150 + 150 + $prelimCount + 2); $maxWide = intval($prelimCount * 2 + 3);
+        if ($byeRoundFlag) { $maxSize = intval($prelimCount * 150 + 300 + $prelimCount + 2); $maxWide = intval($prelimCount * 2 + 5); }
+
+ ?>
+ <table border="0" width="<?php echo $maxSize; ?>" >
+ <col width="1" /> <col width="150" /> <col width="1" /><?php
+ 
+        for ($indx = 1; $indx <= $prelimCount; $indx++)
+        { echo '<col width="150" /> <col width="150" />'; }
+        if ($byeRoundFlag) { echo '<col width="150" /> <col width="1" />'; }
+ 
+ ?>
+
+ <tr>
+ <td width="<?php echo $maxSize; ?>" style="width:<?php echo $maxSize; ?>px;" colspan="<?php echo $maxWide; ?>"><div style="text-align:center;"><span class="redtext18"><em>Individual Participant Scores</em></span></div></td>
+ </tr>
+ <tr>
+ <td width="<?php echo $maxSize; ?>" height="1" style="height:1px;width:<?php echo $maxSize; ?>px;background-color:rgb(100,0,0);" colspan="<?php echo $maxWide; ?>"></td>
+ </tr>
+   <tr>
+    <td style="text-align:center;" colspan="<?php echo $maxWide; ?>"><p class="blktext12">The scores are listed in the following order: Knowledge, Response, Forensics, and Demeanor.<br />One judge per row.<br />Scores from Bye rounds are listed in the round for which a Bye was given.</p></div></td>
+   </tr>
+ <tr>
+ <td width="<?php echo $maxSize; ?>" height="1em" style="height:1em;width:<?php echo $maxSize; ?>px;background-color:transparent;" colspan="<?php echo $maxWide; ?>"></td>
+ </tr>
+ <tr>
+ <td width="1" style="width:1px;"><div style="background-color:black;"></div></td>
+ <td width="150" style="width:150px;"><div style="text-align:center;width:150px;"><span class="redtext12">Participant</span></div></td>
+ <td width="1" style="width:1px;"><div style="background-color:black;"></div></td>
+ <?php
+ 
+        for ($indx = 1; $indx <= $prelimCount; $indx++)
+        { echo '<td width="150" style="width:150px;"><div style="text-align:center;width:150px;"><span class="redtext12">Prelim Round ' . $indx . '</span></div></td><td width="1" style="width:1px;"><div style="background-color:black;width:1px;"></div></td>' . chr(13); }
+//        if ($byeRoundFlag) { echo '<td width="150" style="width:150px;"><div style="text-align:center;"><span class="redtext12">Bye Round</span></div></td>' . chr(13); }
+ ?>
+ </tr>
+    
+<?php
+
+//      Do the team members
+
+            echo '<tr><td colspan="' . $maxWide . '"><div style="height:1px;background-color:rgb(0,0,0);"></div></td></tr>';
+    $result = mysql_query('SELECT p.name, p.student_ID FROM participants AS p, teams AS t WHERE (p.tourney="' . $tourneyID . '" AND  t.tourney="' . $tourneyID . '") AND (p.student_ID = t.student_ID1 OR p.student_ID = t.student_ID2) AND t.team_ID = "' . $theTeam . '" AND (t.school_ID = "' . $theSchool . '" AND p.school_ID = "' . $theSchool . '") ORDER BY p.name;', $dbLink); $oratorsCount = mysql_num_rows($result);
+    $rowIndx = 0; set_time_limit(2);
+    for($indx = 0; $indx < $oratorsCount; $indx++)
+    {
+            @mysql_data_seek($result, $indx); $data = mysql_fetch_row($result);
+            $result2 = mysql_query('SELECT knowledge, response, forensics, demeanor, round, judge FROM scores WHERE tourney = "' . $tourneyID . '" AND student_ID = "' . $data[1] . '" ORDER BY round DESC, judge;', $dbLink);
+            if ((++$rowIndx % 2) == 0) { $color = 'background-color:rgb(225,225,225);'; } else { $color = ''; }
+            echo '<tr><td width="1" style="width:1px;background-color:rgb(0,0,0);"><div style="width:1px;"></div></td><td style="text-align:center;' . $color . '"><p class="blktext12">' . $data[0] . '</p></td>'; $lastJudge = -1; $lastRound = 0;
+
+            for($indx2 = 0; $indx2 < mysql_num_rows($result2); $indx2++)
+            {
+                @mysql_data_seek($result2, $indx2); $data2 = mysql_fetch_assoc($result2);
+                if ($lastRound != $data2['round']) { echo '</p></td><td width="1" style="width:1px;background-color:rgb(0,0,0);"><div style="width:1px;"></div></td><td style="text-align:center;' . $color . '"><p class="pblktext12">'; $lastRound = $data2['round']; }
+                $theTotal = intval($data2['knowledge'] + $data2['response'] + $data2['forensics'] + $data2['demeanor']);
+                echo 'J' . $data2['judge'] . ': ' . $data2['knowledge'] . '-' . $data2['response'] . '-' . $data2['forensics'] . '-' . $data2['demeanor'] . ' (' . $theTotal . ')<br />';
+            }
+
+            echo '</p></td><td width="1" style="width:1px;background-color:rgb(0,0,0);"><div style="width:1px;"></div></td></tr>';
+            echo '<tr><td colspan="' . $maxWide . '"><div style="height:1px;background-color:rgb(0,0,0);"></div></td></tr>';
+    }
+    @mysql_free_result($result);
+
+
+
+//      Start the loop for the prelim rounds to fetch the opposing team scores
+    for ($indx = 1; $indx <= $prelimCount; $indx++)
+    {
+        echo '<tr><td colspan="' . $maxWide . '"><p></p></td></tr>';
+        $result = mysql_query('SELECT team1, team2 FROM rounds WHERE tourney = "' . $tourneyID . '" AND (team1 = "' . $theTeam . '" OR team2 = "' . $theTeam . '") AND round = "' . -$indx . '";', $dbLink);
+        $data = mysql_fetch_row($result); @mysql_free_result($result); $oTeam = ($data[0] == $theTeam) ? $data[1] : $data[0]; unset($data);
+        $result = mysql_query('SELECT teams.school_ID, registration.school FROM teams, registration WHERE teams.team_ID = "' . $oTeam . '" AND (teams.tourney = "' . $tourneyID . '" AND registration.tourney = "' . $tourneyID . '") AND registration.id = teams.school_ID;', $dbLink);
+        $data = mysql_fetch_row($result); $oSchool = $data[0]; $oSchoolName = $data[1]; @mysql_free_result($result); unset($data);
+        $result = mysql_query('SELECT p.name, p.student_ID FROM participants AS p, teams AS t WHERE (p.tourney="' . $tourneyID . '" AND  t.tourney="' . $tourneyID . '") AND (p.student_ID = t.student_ID1 OR p.student_ID = t.student_ID2) AND t.team_ID = "' . $oTeam . '" AND (t.school_ID = "' . $oSchool . '" AND p.school_ID = "' . $oSchool . '") ORDER BY p.name;', $dbLink); $oratorsCount = mysql_num_rows($result);
+
+
+
+        echo chr(13) . '<tr><td colspan="' . $maxWide . '"><span class="blktext12">Opponent: ' . $oSchoolName . '</span></td></tr>';
+        echo chr(13) . '<tr><td colspan="' . $maxWide . '"><div style="height:1px;background-color:rgb(0,0,0);"></div></td></tr>'; $rowIndx = 0;
+
+        for($indx2 = 0; $indx2 < $oratorsCount; $indx2++)
+        {
+            @mysql_data_seek($result, $indx2); $data = mysql_fetch_row($result);
+            $result2 = mysql_query('SELECT knowledge, response, forensics, demeanor, round, judge FROM scores WHERE tourney = "' . $tourneyID . '" AND student_ID = "' . $data[1] . '" AND round = "' . -$indx . '" ORDER BY judge;', $dbLink);
+            if ((++$rowIndx % 2) == 0) { $color = 'background-color:rgb(225,225,225);'; } else { $color = ''; }
+            echo '<tr><td width="1" style="width:1px;background-color:rgb(0,0,0);"><div style="width:1px;"></div></td><td style="text-align:center;' . $color . '"><p class="blktext12">' . $data[0] . '</p></td>';
+
+            echo '<td width="1" style="width:1px;background-color:rgb(0,0,0);"></td>';
+            for ($indx3 = 1; $indx3 < $indx; $indx3++) { echo '<td></td><td width="1" style="width:1px;background-color:rgb(0,0,0);"><div style="width:1px;"></div></td>'; }
+            echo '<td style="text-align:center;' . $color . '"><p class="pblktext12">';
+            for($indx3 = 0; $indx3 < mysql_num_rows($result2); $indx3++)
+            {
+                @mysql_data_seek($result2, $indx3); $data2 = mysql_fetch_assoc($result2);
+                $theTotal = intval($data2['knowledge'] + $data2['response'] + $data2['forensics'] + $data2['demeanor']);
+                echo 'J' . $data2['judge'] . ': ' . $data2['knowledge'] . '-' . $data2['response'] . '-' . $data2['forensics'] . '-' . $data2['demeanor'] . ' (' . $theTotal . ')<br />';
+            }
+
+            echo '</p></td><td width="1" style="width:1px;background-color:rgb(0,0,0);"><div style="width:1px;"></div></td>';
+            for ($indx3 = intval($indx + 1); $indx3 <= $prelimCount; $indx3++) { echo '<td></td><td width="1" style="width:1px;background-color:rgb(0,0,0);"></td>'; }
+            echo '</tr>' . chr(13) . '<tr><td colspan="' . $maxWide . '"><div style="height:1px;background-color:rgb(0,0,0);"></div></td></tr>';
+        }
+
+
+
+    }
+    
+    
+    
+    @mysql_close($dbLink);
+
+
+?>
+
+
+</table> 
+ </body></html>

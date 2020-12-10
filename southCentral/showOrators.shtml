@@ -1,0 +1,69 @@
+<?php
+
+    include 'common.php';
+
+    $whom = false; $pass = false; $userCode = false;
+//    if ($_SERVER['SERVER_PORT'] != 443) { header('Location: ' . $serverPathS . $_SERVER['REQUEST_URI']); exit(); }
+
+    $userCode = verifySignIn();
+    if (($userCode === false) || ($userCode < 2)) { header('Location: '. $fullPath); exit; }
+
+    include 'head_s.shtml';
+
+
+
+
+    $dbLink = openConn();
+
+?> 
+
+
+ <table border="0" width="800" cellpadding="0" cellspacing="0" style="margin-top:.5em;">
+ <col width="100" /><col width="100" /><col width="200" /><col width="400" />
+ <tr>
+ <td width="800" style="width:800px;" colspan="4"><div style="margin-bottom:1em;"><span class="blktext10"><a href="<?php echo $fullPathSA; ?>">Back to the admin page</a></span></div></td>
+ </tr>
+
+ <tr>
+ <td width="800" style="width:800px;" colspan="8"><div style="text-align:center;"><span class="redtext18"><em>Orator Rankings</em></span></div></td>
+ </tr>
+ <tr>
+ <td width="800" height="1" style="height:1px;width:800px;background-color:rgb(100,0,0);" colspan="8"></td>
+ </tr>
+ <tr>
+ <td width="800" height="20" style="height:20px;width:800px;background-color:transparent;" colspan="8"></td>
+ </tr>
+ 
+
+<?php
+
+
+    $result = mysql_query('SELECT AVG(s.total) AS avg, p.name, r.school FROM scores AS s, participants AS p, registration AS r, teams AS t WHERE (p.student_ID=s.student_ID AND r.id=p.school_ID) AND (s.tourney = "' . $tourneyID . '" AND r.tourney = "' . $tourneyID . '" AND p.tourney = "' . $tourneyID . '") AND (t.isSquib = "0" AND t.team_ID = s.team_ID) GROUP BY s.student_ID ORDER BY avg DESC;', $dbLink);
+
+    if (mysql_num_rows($result) > 0)
+    {
+
+        for($indx = 0; $indx < mysql_num_rows($result); $indx++)
+        {
+            @mysql_data_seek($result, $indx); 
+            $data = mysql_fetch_row($result);
+            if (($indx % 2) == 0) { $color = ' style="background-color:rgb(225,225,225);"'; } else { $color = ''; }
+            echo '<tr' .  $color . '><td style="text-align:center;"><span class="blktext12">' . intval($indx+1) . '</span></td>';
+            echo '<td style="text-align:center;"><span class="blktext12">' . $data[0] . '</span></td>';
+            echo '<td style=""><span class="blktext12">' . $data[1] . '</span></td>';
+            echo '<td style=""><span class="blktext12">' . $data[2] . '</span></td></tr>';
+        }
+        @mysql_free_result($result);
+    }
+    else
+    {
+        echo '<tr><td colspan="8"><p class="redtext14">NO RECORDS</p></td></tr>' . chr(13);
+    }
+    @closeConn($dbLink);
+?>
+
+   <tr>
+     <td width="800" height="20" style="height:20px;width:800px;background-color:transparent;" colspan="8"></td>
+   </tr>
+</table> 
+ </body></html>

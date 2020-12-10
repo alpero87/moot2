@@ -1,0 +1,88 @@
+<?php
+
+    include 'common.php';
+
+    $whom = false; $pass = false; $userCode = false;    
+    if ($_SERVER['SERVER_PORT'] != 443) { header('Location: ' . $serverPathS . $_SERVER['REQUEST_URI']); exit(); }
+
+    $userCode = verifySignIn();
+    if (($userCode === false) || ($userCode < 1)) { header('Location: '. $fullPath); exit; }
+
+    include 'head_s.shtml';
+
+
+    $dbLink = openConn();
+    $result = mysql_query('SELECT data FROM preferences WHERE tourney = "' . $tourneyID . '" AND dataKey = "prelimRounds";', $dbLink);
+    $data = mysql_fetch_row($result); $prelimCount = $data[0]; unset($data); @mysql_free_result($result);
+    $maxSize = intval($prelimCount * 150 + 150); $maxWide = intval($prelimCount + 1);
+    if ($byeRoundFlag) { $maxSize = intval($prelimCount * 150 + 300); $maxWide = intval($prelimCount + 2); }
+
+ ?>
+
+
+ <table border="0" width="<?php echo $maxSize; ?>" cellspacing="1em" style="margin-top:.5em;">
+ <col width="250" /><?php
+ 
+        for ($indx = 1; $indx <= $prelimCount; $indx++)
+        { echo '<col width="100" />'; }
+        if ($byeRoundFlag) { echo '<col width="150" />'; }
+ 
+ ?>
+
+ <tr>
+ <td width="<?php echo $maxSize; ?>" style="width:<?php echo $maxSize; ?>px;" colspan="<?php echo $maxWide; ?>"><div style="margin-bottom:1em;"><span class="blktext10"><a href="<?php echo $fullPathSA; ?>">Back to the admin page</a></span></div></td>
+ </tr>
+ <tr>
+ <td width="<?php echo $maxSize; ?>" style="width:<?php echo $maxSize; ?>px;" colspan="<?php echo $maxWide; ?>"><div style="text-align:center;"><span class="redtext18"><em>Individual Room Assignments</em></span></div></td>
+ </tr>
+ <tr>
+ <td width="<?php echo $maxSize; ?>" height="1" style="height:1px;width:<?php echo $maxSize; ?>px;background-color:rgb(100,0,0);" colspan="<?php echo $maxWide; ?>"></td>
+ </tr>
+ <tr>
+ <td width="150" style="width:150px;"><div style="text-align:center;"><span class="redtext12">Who</span></div></td>
+ <?php
+ 
+        for ($indx = 1; $indx <= $prelimCount; $indx++)
+        { echo '<td width="150" style="width:150px;"><div style="text-align:center;"><span class="redtext12">Prelim Round ' . $indx . '</span></div></td>' . chr(13); }
+        if ($byeRoundFlag) { echo '<td width="150" style="width:150px;"><div style="text-align:center;"><span class="redtext12">Bye Round</span></div></td>' . chr(13); }
+ ?>
+ </tr>
+ <tr>
+ <td width="<?php echo $maxSize; ?>" height="1" style="height:1px;width:<?php echo $maxSize; ?>px;background-color:rgb(100,0,0);" colspan="<?php echo $maxWide; ?>"></td>
+ </tr>
+ <tr>
+ <td width="<?php echo $maxSize; ?>" height="10" style="height:10px;width:<?php echo $maxSize; ?>px;background-color:transparent;" colspan="<?php echo $maxWide; ?>"></td>
+ </tr>
+ 
+
+<?php
+
+    //  Build the table
+
+    $noColor = true; $base = intval(-$prelimCount - 1);
+    $people = mysql_query('SELECT p.name, r2.round, r.roomNumber, b.abbr FROM participants AS p, rooms AS r, buildings AS b, rounds AS r2, teams AS t WHERE ((t.student_ID1 = p.student_ID) OR (t.student_ID2 = p.student_ID)) AND ((r2.team1 = t.team_ID) OR (r2.team2 = t.team_ID)) AND (r.id = r2.location) AND (b.id = r.building_ID) ORDER BY p.name ASC, r2.round DESC;', $dbLink);
+
+    $qty = intval(mysql_num_rows($people) / 3);
+    for($indx = 0; $indx < $qty; $indx++)
+    {
+            $base += intval($prelimCount + 1); @mysql_data_seek($people, $base); $data = mysql_fetch_row($people); $noColor = !$noColor;
+            if (!$noColor) { $color = ' style="background-color:rgb(225,225,225);"'; } else { $color = ''; }
+            echo '<tr' .  $color . '><td style="cell-padding:.2em;text-align:center;"><p class="blktext12">' . $data[0] . '</p></td>';
+            echo '<td style="cell-padding:.2em;text-align:center;"><p class="blktext12">' . $data[2] . ' ' . $data[3] . '</p></td>'; unset($data);
+            for ($indx2 = 1; $indx2 < $prelimCount; $indx2++)
+            {
+                @mysql_data_seek($people, intval($base + $indx2)); $data = mysql_fetch_row($people);
+                echo '<td style="cell-padding:.2em;text-align:center;"><p class="blktext12">' . $data[2] . ' ' . $data[3] . '</p></td>'; unset($data);
+            }
+            echo '</tr>' . chr(13);
+    }
+    @mysql_free_result($people);
+    
+    @closeConn($dbLink);
+?>
+
+   <tr>
+     <td width="800" height="20" style="height:20px;width:800px;background-color:transparent;" colspan="8"></td>
+   </tr>
+</table> 
+ </body></html>

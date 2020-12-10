@@ -1,0 +1,361 @@
+<?php
+
+/*
+
+        $round: is negative if a preliminary round in ascending order [-1 = pre1, -5 = pre5], positive for final rounds in decending order [rnd64 = 6, final = 1].
+
+*/
+
+
+    include 'common.php';
+
+
+
+
+
+
+function make_seed()
+{
+    list($usec, $sec) = explode(' ', microtime());
+    return (float) $sec + ((float) $usec * 100000);
+}
+
+
+
+
+
+
+
+function SaveParticipantScores($pID, $tID, $s1, $s2, $s3, $s4, $judge)
+{
+         global $dbLink, $round, $tourneyID;
+                 
+         $what = 'SELECT COUNT(*) FROM scores WHERE student_ID = "' . $pID . '" AND round = "' . $round . '" AND judge = "' . $judge . '" AND tourney="' . $tourneyID . '";';
+         $result = mysql_query($what, $dbLink); $data = mysql_fetch_row($result); $answer = true; $total = intval($s1 + $s2 + $s3 + $s4);
+         if ($data[0] == 0)
+         {
+            $what = 'INSERT INTO scores VALUES("' . $tourneyID . '", "' . $round . '", "' . $pID . '", "' . $tID . '", "' . $judge . '", "' . $s1 . '", "' . $s2 . '", "' . $s3 . '", "' . $s4 . '", "' . $total . '");';
+         }
+         else
+         {
+            $what = 'UPDATE scores SET judge = "' . $judge . '" AND knowledge = "' . $s1 . '" AND response = "' . $s2 . '" AND forensics = "' . $s3 . '" AND demeanor = "' . $s4 . '" AND total = "' . $total . '" WHERE tourney = "' . $tourneyID . '" AND round = "' . $round . '" and student_ID = "' . $pID . '";';
+         }
+         $result = mysql_query($what, $dbLink); if (mysql_affected_rows($dbLink) != 1) { $answer = false; }
+         return $answer;
+         
+         // If the result is false, track which student caused the problem to report back to the user.
+}
+
+
+
+
+
+function MarkMatchComplete($t1, $t2)
+{
+         global $dbLink, $round, $tourneyID;
+         
+         $what = 'UPDATE rounds SET finished = "1" WHERE ((team1 = "' . $t1. '" AND team2 = "' . $t2 . '") OR (team1 = "' . $t2. '" AND team2 = "' . $t1 . '")) AND round = "' . $round . '" AND tourney="' . $tourneyID . '";';
+         $result = mysql_query($what, $dbLink); $answer = true;
+         if (mysql_affected_rows($dbLink) != 1) { $answer = false; }
+         return $answer;        
+}
+
+
+
+
+
+
+
+function UpdateTeamRecord($teamA, $teamB)
+{
+    global $dbLink, $round, $tourneyID;
+    
+    $result = mysql_query('SELECT total, judge FROM scores WHERE team_ID = "' . $teamA . '" AND round = "' . $round . '" AND tourney="' . $tourneyID . '" ORDER BY judge;', $dbLink);
+    $avg = 0; $totalsA = array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0); $totalsB = array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    for($indx = 0; $indx < mysql_num_rows($result); $indx++)
+    {  @mysql_data_seek($result, $indx); $data = mysql_fetch_row($result); $totalsA[$data[1]] += $data[0]; unset($data);  }
+    @mysql_free_result($result);
+    
+    $result = mysql_query('SELECT total, judge FROM scores WHERE team_ID = "' . $teamB . '" AND round = "' . $round . '" AND tourney="' . $tourneyID . '" ORDER BY judge;', $dbLink);
+    for($indx = 0; $indx < mysql_num_rows($result); $indx++)
+    {  @mysql_data_seek($result, $indx); $data = mysql_fetch_row($result); $totalsB[$data[1]] += $data[0]; unset($data);  }
+    @mysql_free_result($result);
+    
+
+    $column = WhichFieldInTeams($round);
+
+    $wins[0] = 0; $wins[1] = 0; $pd[0] = 0; $pd[1] = 0; $judgeCount = 0;
+    
+    for ($indx = 1; $indx < 21; $indx++)
+    {
+        if ($totalsA[$indx] != 0 || $totalsB[$indx] != 0)
+        {
+            $avgs[$indx] = ($totalsA[$indx] + $totalsB[$indx]) / 2; $judgeCount += 1;
+            if ($totalsA[$indx] > $totalsB[$indx]) 
+                { $wins[0] += 1; }
+            elseif ($totalsA[$indx] < $totalsB[$indx]) 
+                { $wins[1] += 1; }
+            elseif ($totalsA[$indx] == $totalsB[$indx]) 
+                { $wins[1] += 0.5; $wins[0] += 0.5; }
+        }
+    }
+    $ballotsA = ($judgeCount / 2) * $wins[0]; $ballotsB = ($judgeCount / 2) * $wins[1];
+    if ($round < 0)
+    { $ballotTextA = 'prelimBallots = prelimBallots + ' . $ballotsA; $ballotTextB = 'prelimBallots = prelimBallots + ' . $ballotsB; }
+    else
+    { $ballotTextA = 'finalsBallots = finalsBallots + ' . $ballotsA; $ballotTextB = 'finalsBallots = finalsBallots + ' . $ballotsB; }
+
+
+
+    for ($indx = 1; $indx < 21; $indx++)
+    {
+        $pds[0] += ($totalsA[$indx] - $avgs[$indx]);
+        $pds[1] += ($totalsB[$indx] - $avgs[$indx]);
+    }
+    
+    if ($round < 0) { $option0 = ', pd' . abs($round) . ' = "' . $pds[0] . '"'; $option1 = ', pd' . abs($round) . ' = "' . $pds[1] . '"'; } else { $option0 = ''; $option1 = ''; }
+    if ($wins[0] == $wins[1] && $wins[0] != 0)
+    {
+        $job  = 'UPDATE teams SET tie=tie+1, ' . $column . ' = "' . array_sum($totalsA) . '"' . $option0 . ', ' . $ballotTextA . ' WHERE team_ID = "' . $teamA . '" AND tourney="' . $tourneyID . '";';
+        $job2 = 'UPDATE teams SET tie=tie+1, ' . $column . ' = "' . array_sum($totalsB) . '"' . $option1 . ', ' . $ballotTextB . ' WHERE team_ID = "' . $teamB . '" AND tourney="' . $tourneyID . '";';
+    }
+    elseif ($wins[0] > $wins[1])
+    {
+        $job  = 'UPDATE teams SET win=win+1, ' . $column . ' = "' . array_sum($totalsA) . '"' . $option0 . ', ' . $ballotTextA . ' WHERE team_ID = "' . $teamA . '" AND tourney="' . $tourneyID . '";';
+        $job2 = 'UPDATE teams SET loss=loss+1, ' . $column . ' = "' . array_sum($totalsB) . '"' . $option1 . ', ' . $ballotTextB . ' WHERE team_ID = "' . $teamB . '" AND tourney="' . $tourneyID . '";';
+    }
+    elseif ($wins[1] > $wins[0])
+    {
+        $job  = 'UPDATE teams SET win=win+1, ' . $column . ' = "' . array_sum($totalsB) . '"' . $option1 . ', ' . $ballotTextB . ' WHERE team_ID = "' . $teamB . '" AND tourney="' . $tourneyID . '";';
+        $job2 = 'UPDATE teams SET loss=loss+1, ' . $column . ' = "' . array_sum($totalsA) . '"' . $option0 . ', ' . $ballotTextA . ' WHERE team_ID = "' . $teamA . '" AND tourney="' . $tourneyID . '";';
+    }
+
+    
+    $result = mysql_query($job, $dbLink); @mysql_free_result($result); $result = mysql_query($job2, $dbLink); @mysql_free_result($result);
+}    
+
+
+
+
+
+
+function ComputeNextRound($theRound)
+{
+         global $dbLink, $round, $tourneyID;
+         if ($theRound < 0)
+         {
+            $result = mysql_query('SELECT data FROM preferences WHERE dataKey = "prelimRounds" AND tourney="' . $tourneyID . '";', $dbLink); $data = mysql_fetch_row($result); $prelims = -$data[0]; @mysql_free_result($result); unset($data);
+            $result = mysql_query('SELECT data FROM preferences WHERE dataKey = "finalRounds" AND tourney="' . $tourneyID . '";', $dbLink); $data = mysql_fetch_row($result); $finals = $data[0]; @mysql_free_result($result); unset($data);
+            if ($theRound < $prelims) { $answer = $finals; } else { $answer = $theRound; }
+         } else { $answer = $theRound; }
+         return $answer;         
+}
+
+
+
+
+
+
+function GetPrefData($theKey)  // returns the value, false if failure
+{
+         global $dbLink, $tourneyID;
+         $result = mysql_query('SELECT data FROM preferences WHERE dataKey = "' . $theKey . '" AND tourney="' . $tourneyID . '";', $dbLink);
+         if (mysql_affected_rows($dbLink) != 1)
+         { $answer = false; }
+         else
+         {  $data = mysql_fetch_row($result); $answer = $data[0]; unset($data); @mysql_free_result($result);  }
+         return $answer;         
+}
+
+
+
+
+
+
+function SetPrefData($theKey, $theValue)  // returns true / false
+{
+         global $dbLink, $tourneyID;
+         $result = mysql_query('UPDATE preferences SET data = "' . $theValue . '" WHERE dataKey = "' . $theKey . '" AND tourney="' . $tourneyID . '";', $dbLink); $answer = true;
+         if (mysql_affected_rows($dbLink) != 1) { $answer = false; }
+         return $answer;         
+}
+
+
+
+
+
+
+
+
+
+
+function WhichFieldInRooms($theRound)
+{
+        $prelim = intval(GetPrefData('prelimRounds'));
+        $finals = intval(GetPrefData('finalRounds'));
+        switch ($theRound)
+        {
+                case  -1: { $fieldName = 'pre1'; break; }
+                case  -2: { $fieldName = 'pre2'; break; }
+                case  -3: { $fieldName = 'pre3'; break; }
+                case  -4: { $fieldName = 'pre4'; break; }
+                case  -5: { $fieldName = 'pre5'; break; }
+                case -100: { $fieldName = 'bye'; break; }
+                case   1: { $fieldName = 'final'; break; }
+                case   2: { $fieldName = 'semi'; break; }
+                case   3: { $fieldName = 'quarter'; break; }
+                case   4: { $fieldName = 'sixteen'; break; }
+                case   5: { $fieldName = 'rnd32'; break; }
+                case   6: { $fieldName = 'rnd64'; break; }
+                default:  { $fieldName = false; break; }
+        }
+        if ($theRound > 0)
+        {   if ($theRound > $finals) { $fieldName = false; }    }
+        else
+        {   if (($theRound < -$prelim)&&($theRound != -100)) { $fieldName = false; }    }
+        
+        return $fieldName;
+}
+
+
+
+
+         
+function WhichFieldInTeams($theRound)
+{
+        $prelim = intval(GetPrefData('prelimRounds')); $finals = intval(GetPrefData('finalRounds'));
+        switch ($theRound)
+        {
+           case  -1: { $fieldName = 'pre1'; break; }
+           case  -2: { $fieldName = 'pre2'; break; }
+           case  -3: { $fieldName = 'pre3'; break; }
+           case  -4: { $fieldName = 'pre4'; break; }
+           case  -5: { $fieldName = 'pre5'; break; }
+           case -100: { $fieldName = 'bye'; break; }
+           case   1: { $fieldName = 'final'; break; }
+           case   2: { $fieldName = 'semi'; break; }
+           case   3: { $fieldName = 'quarter'; break; }
+           case   4: { $fieldName = 'sixteen'; break; }
+           case   5: { $fieldName = 'rnd32'; break; }
+           case   6: { $fieldName = 'rnd64'; break; }
+           default:  { $fieldName = false; break; }
+        }
+        if ($theRound > 0)
+        {   if ($theRound > $finals) { $fieldName = false; }    }
+        else
+        {   if (($theRound < -$prelim)&&($theRound != -100)) { $fieldName = false; }    }
+
+         return $fieldName;
+}
+
+
+
+
+
+
+
+
+
+function ProcessScores()
+{
+    global $round, $tourneyID;
+    
+    $teamA = $_POST['teamA']; $teamB = $_POST['teamB']; $round = GetPrefData('currentRound'); $roundcount = GetPrefData('prelimRounds'); $judgeCount = $_POST['judgeCount'];
+    $playerA = $_POST['playerA']; $playerB = $_POST['playerB']; $playerC = $_POST['playerC']; $playerD = $_POST['playerD'];
+    $saveRound = $round; $round = $_POST['tourneyRound'];
+    
+    for($indx = 0; $indx < $judgeCount; $indx++)
+    {
+        $judge = intval($indx + 1);
+        if ( $_POST[$judge . 'A1'] != 0 && $_POST[$judge . 'B1'] != 0 )
+        {
+            @SaveParticipantScores($playerA, $teamA, $_POST[$judge . 'A1'], $_POST[$judge . 'A2'], $_POST[$judge . 'A3'], $_POST[$judge . 'A4'], $judge);
+            @SaveParticipantScores($playerB, $teamA, $_POST[$judge . 'B1'], $_POST[$judge . 'B2'], $_POST[$judge . 'B3'], $_POST[$judge . 'B4'], $judge);
+            @SaveParticipantScores($playerC, $teamB, $_POST[$judge . 'C1'], $_POST[$judge . 'C2'], $_POST[$judge . 'C3'], $_POST[$judge . 'C4'], $judge);
+            @SaveParticipantScores($playerD, $teamB, $_POST[$judge . 'D1'], $_POST[$judge . 'D2'], $_POST[$judge . 'D3'], $_POST[$judge . 'D4'], $judge);
+        }
+    }
+    
+    if (GetPrefData('useVerify') == 1) { @MarkMatchComplete($teamA, $teamB); @UpdateTeamRecord($teamA, $teamB); $round = $saveRound; }
+
+}
+
+
+
+
+
+
+
+
+
+function SelectTeams()
+{
+    global $dbLink, $round, $tourneyID, $fullPathSA;
+    
+    $action = $_POST['action'];
+    switch ($action)
+    {
+        case 'Choose by name': { $theTeam = intval($_POST['name']); break; }
+        case 'Choose by team': { $theTeam = intval($_POST['team']); break; }
+    }
+    $result = mysql_query('SELECT team1, team2 FROM rounds WHERE ((team1 = "' . $theTeam . '" OR team2 = "' . $theTeam . '") AND round = "' . $round . '") AND tourney="' . $tourneyID . '";', $dbLink);
+    if (mysql_num_rows($result) == 0)
+    {
+        echo '<html><head><title>ACMA Moot Court</title></head><body>ERROR: that team was not found (SELECT team1, team2 FROM rounds WHERE ((team1 = "' . $theTeam . '" OR team2 = "' . $theTeam . '") AND round = "' . $round . '") AND tourney="' . $tourneyID . '";).<br /><a href="teamSelectors.shtml">Back to the team selector page</a></body></html>';
+    }
+    $data = mysql_fetch_row($result); @mysql_free_result($result); @mysql_close($dbLink);
+    header('Location: ' . $fullPathSA . '/scoreEntry.shtml?teamA=' . $data[0] . '&teamB=' . $data[1]); unset($data);
+    return false;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*  *************************************
+                main section
+    ************************************* */
+
+
+    $dbLink = openConn();
+
+        $noDJ = (GetPrefData('noDoubleJeapordy') == 1) ? true : false; 
+
+        $formKey = ''; if (isset($_POST['source'])) { $formKey = trim($_POST['source']); }
+        $round = GetPrefData('currentRound');
+
+
+
+    if ($formKey != '')
+    {
+        switch ($formKey)
+        {
+            case 'scores': { @ProcessScores(); header('Location: ' . $fullPathSA . 'teamSelectors.shtml'); break; }
+            case 'chooseTeams': { @SelectTeams(); break; }
+        }
+    
+    }
+
+
+ @closeConn($dbLink);
+
+
+
+
+
+
+
+
+
+
+
+

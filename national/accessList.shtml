@@ -1,0 +1,140 @@
+<?php
+
+    include 'common.php';
+
+
+    $userCode = verifySignIn();
+    if (($userCode === false) || ($userCode < 2)) { header('Location: '. $fullPath); exit; }
+
+    $whom = false; $pass = false; $userCode = false; $flag = false;
+
+
+        $dbLink = openConn();
+        if (isset($_POST['validated']))
+        {
+            $uCount = $_POST['uCount'];
+            for ($indx = 0; $indx < $uCount; $indx++)
+            {
+                if (strtoupper($_POST['user' . $indx]) == '1')
+                {
+                    $prior = $_POST['origin' . $indx]; $oldName = substr($prior, 0, strpos($prior, ':')); $oldPass = substr($prior, strpos($prior, ':') + 1, strlen($prior));
+                    $passwd = $_POST['password' . $indx]; if ( strlen($passwd) > 0 && $_POST['ldap' . $indx] == 1 ) { $passwd = ''; }
+                    $job = 'UPDATE authentication AS auth SET auth.name = AES_ENCRYPT("' . $_POST['username' . $indx] . '","' . $encryptString . '"), auth.password = AES_ENCRYPT("' . $passwd . '","' . $encryptString . '")';
+                    $job .= ', auth.class = "' . $_POST['class' . $indx] . '", auth.useLDAP = "' . $_POST['ldap' . $indx] . '" WHERE auth.tourney = "' . $tourneyID . '"';
+                    $job .= ' AND auth.name = AES_ENCRYPT("' . $oldName . '","' . $encryptString . '") AND auth.password = AES_ENCRYPT("' . $oldPass . '","' . $encryptString . '");';
+                    if (!(strlen($passwd) == 0 && $_POST['ldap' . $indx] == 0)) { @mysql_query($job, $dbLink); }
+                }
+                if (strtoupper($_POST['user' . $indx]) == '2')
+                {
+                    $prior = $_POST['origin' . $indx]; $oldName = substr($prior, 0, strpos($prior, ':')); $oldPass = substr($prior, strpos($prior, ':') + 1, strlen($prior));
+                    $job = 'DELETE FROM authentication WHERE authentication.tourney = "' . $tourneyID . '" AND authentication.name = AES_ENCRYPT("' . $oldName . '","' . $encryptString . '") AND authentication.password = AES_ENCRYPT("' . $oldPass . '","' . $encryptString . '");';
+                    @mysql_query($job, $dbLink);
+                }
+            }
+            for ($indx = 0; $indx < 5; $indx++)
+            {
+                if (strtoupper($_POST['new' . $indx]) == 'ON')
+                {
+                    $job = 'SELECT COUNT(*) FROM authentication WHERE name = AES_ENCRYPT("' . $_POST['nUsername' . $indx] . '","' . $encryptString . '") AND password = AES_ENCRYPT("' . $_POST['nPassword' . $indx] . '","' . $encryptString . '") AND tourney = "' . $tourneyID . '"';
+                    $result = mysql_query($job, $dbLink); $data = mysql_fetch_row($result); @mysql_free_result($result);
+                    if ($data[0] == 0)
+                    {
+                        $passwd = $_POST['nPassword' . $indx]; if ( strlen($passwd) > 0 && $_POST['nLDAP' . $indx] == 1 ) { $passwd = ''; }
+                        $job = 'INSERT INTO authentication VALUES("' . $tourneyID .  ' ", AES_ENCRYPT("' . $_POST['nUsername' . $indx] . '","' . $encryptString . '"), AES_ENCRYPT("' . $passwd . '","' . $encryptString . '")';
+                        $job .= ', "' . $_POST['nClass' . $indx] . '", "' . $_POST['nLDAP' . $indx] . '");';
+                        if (!(strlen($passwd) == 0 && $_POST['nLDAP' . $indx] == 0)) { @mysql_query($job, $dbLink); }
+                    }
+                    unset($data);
+                }
+            }
+        }
+        
+        $accessList = mysql_query('SELECT AES_DECRYPT(name,"' . $encryptString . '") as name, AES_DECRYPT(password,"' . $encryptString . '") as pass, class, useLDAP FROM authentication WHERE tourney = "' . $tourneyID . '";', $dbLink); 
+        @closeConn($dbLink);
+
+    include 'head_s.shtml';
+
+?>
+
+
+    <form enctype="multipart/form-data" action="<?php echo $serverPathS . $_SERVER['REQUEST_URI']; ?>" method="post"><input type="hidden" value="1" name="validated" id="validated" />
+ <table border="0" width="840" cellpadding="0" cellspacing="0" style="margin-top:25px;">
+ <col width="6" /><col width="200" /><col width="217" /><col width="417" />
+
+
+ <tr>
+ <td width="<?php echo $maxSize; ?>" style="width:<?php echo $maxSize; ?>px;" colspan="4"><div style="margin-bottom:1em;"><span class="blktext10"><a href="<?php echo $fullPathSA; ?>">Back to the admin page</a></span></div></td>
+ </tr>
+
+
+   <tr>
+     <td width="6" style="width:6px;background-color:rgb(100,0,0);"></td>
+     <td width="834" style="width:834px;" colspan="3"><div style="margin-left:10px;"><span class="redtext14">Access List</span></div></td>
+   </tr>
+   <tr>
+     <td width="840" height="1" style="height:1px;width:840px;background-color:rgb(100,0,0);" colspan="4"></td>
+   </tr>
+   <tr>
+      <td width="840" style="width:840px;background-color:transparent;height:3px;" colspan="4"></td>
+   </tr>
+   
+   <tr>
+      <td width="840" style="width:840px;background-color:transparent;height:3px;" colspan="4"><p class="blktext12">Current Users:</p>
+        <?php
+
+    if (mysql_num_rows($accessList) == 0)
+    {
+        echo '<p class="blktext12">None defined</p>';
+    }
+    else
+    {
+        echo '<p class="pblktext12"><input type="hidden" name="uCount" id="uCount" value="' . mysql_num_rows($accessList) . '" />';
+        for ($indx = 0; $indx < mysql_num_rows($accessList); $indx++)
+        {
+            @mysql_data_seek($accessList, $indx); $data = mysql_fetch_assoc($accessList);
+            echo '<p class="pblktext12"><input type="hidden" value="' . $data['name'] . ':' . $data['pass'] . '" name="origin' . $indx . '" />';
+            echo '<select name="user' . $indx . '" id="user' . $indx . '" /><option value="0">Choose an action</option><option value="1">Edit</option><option value="2">Delete</option></select>';
+            echo '<input style="margin-left:1em;" type="text" width="16" maxlength="32" name="username' . $indx . '" id="username' . $indx . '" value="' . $data['name'] . '" />';
+            echo '<input style="margin-left:.5em;" type="text" width="16" maxlength="32" name="password' . $indx . '" id="password' . $indx . '" value="' . $data['pass'] . '" />';
+            echo '<select style="margin-left:1em;" name="class' . $indx . '" id="class' . $indx . '" />';
+            echo '<option value="0" '; if ($data['class'] == 0) { echo 'selected="selected "'; } echo '>Disabled</option>';
+            echo '<option value="1" '; if ($data['class'] == 1) { echo 'selected="selected "'; } echo '>Scorer / Verifier</option>';
+            echo '<option value="2" '; if ($data['class'] == 2) { echo 'selected="selected "'; } echo '>Administrator</option></select>';
+            echo '<select style="margin-left:1em;" name="ldap' . $indx . '" id="ldap' . $indx . '" />';
+            echo '<option value="0" '; if ($data['useLDAP'] == 0) { echo 'selected="selected "'; } echo '>Use LDAP Disabled</option>';
+            echo '<option value="1" '; if ($data['useLDAP'] == 1) { echo 'selected="selected "'; } echo '>Use LDAP Enabled</option></select></p>';
+        }
+        echo '</p>';
+    }
+    echo '<p class="blktext12">Add New Users:</p><p class="pblktext12">To create a new account, click the checkbox and fill out the information. It the checkbox is not present, it will not save the account.<br />';
+    for ($indx = 0; $indx < 5; $indx++)
+    {
+        echo '<p class="pblktext12">';
+        echo '<input type="checkbox" name="new' . $indx . '" id="new' . $indx . '" />';
+        echo '<input style="margin-left:.5em;" type="text" width="16" maxlength="32" name="nUsername' . $indx . '" id="nUsername' . $indx . '" />';
+        echo '<input style="margin-left:.5em;" type="text" width="16" maxlength="32" name="nPassword' . $indx . '" id="nPassword' . $indx . '" />';
+        echo '<select style="margin-left:1em;" name="nClass' . $indx . '" id="nClass' . $indx . '" /><option value="0">Disabled</option><option value="1">Scorer / Verifier</option><option value="2">Administrator</option></select>';
+        echo '<select style="margin-left:1em;" name="nLDAP' . $indx . '" id="nLDAP' . $indx . '" /><option value="0">Use LDAP Disabled</option><option value="1">Use LDAP Enabled</option></select></p>';
+    }
+    echo '</p>';
+
+        ?>
+      </td>
+   </tr>
+
+   <tr>
+        <td></td>
+        <td colspan="3"><div style="margin-top:1em;text-align:center;"><input type="submit" name="save" id="save" value="Save changes" /><input style="margin-left:3em;" type="reset" value="Reset data" /></div></td>
+   </tr>
+
+
+
+ <tr>
+    <td width="840" style="width:840px;background-color:transparent;height:2em;" colspan="4"></td>
+ </tr>
+
+
+ </table>
+    </form>
+
+<?php include 'foot.shtml'; ?>

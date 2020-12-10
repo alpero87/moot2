@@ -1,0 +1,224 @@
+<?php
+
+    include 'common.php';
+
+    $whom = false; $pass = false; $userCode = false;
+    if ((!isset($_COOKIE['acmaAdminUser']) || !isset($_COOKIE['acmaAdminPass'])) && (!isset($_SERVER['PHP_AUTH_USER']) || !isset($_SERVER['PHP_AUTH_PW'])))
+    {
+        header('WWW-Authenticate: Basic realm="Moot Court Authentication Request"');
+        header('HTTP/1.0 401 Unauthorized');
+        echo 'User authentication failed.';
+        exit;
+    }
+    
+    if (!isset($_COOKIE['acmaAdminUser']) || !isset($_COOKIE['acmaAdminPass']))
+    {
+        if (isset($_SERVER['PHP_AUTH_USER'])) { $whom = trim($_SERVER['PHP_AUTH_USER']); }
+        if (isset($_SERVER['PHP_AUTH_PW']))   { $pass = trim($_SERVER['PHP_AUTH_PW']); }
+// echo '*' . $whom . '*' . $pass . '*';
+        if ($whom !== false && $pass !== false) { $dbLink = openConn(); $userCode = checkCredentials($whom, $pass); }
+        if ($userCode === false)
+        { unset($_SERVER['PHP_AUTH_USER']); unset($_SERVER['PHP_AUTH_PW']);  exit('Authentication failed.'); }
+        else
+        {
+            $result = mysql_query('SELECT SHA1(AES_ENCRYPT(CONCAT("' . mysql_real_escape_string($whom) . '","' . mysql_real_escape_string($pass) . '"),"' . $encryptString . '"));', $dbLink);
+            $data = mysql_fetch_row($result); @setcookie('acmaHash', $data[0], 0, '/', '');
+        }
+        @closeConn($dbLink);
+    }
+    else
+    {
+        $dbLink = openConn();
+        $userCode = checkCookies();
+
+
+
+    $result = mysql_query('SELECT * FROM preferences;', $dbLink);
+    if (mysql_errno($dbLink) != 0)  { exit('DB job failed (1).'); }   
+    for ($indx = 0; $indx < mysql_num_rows($result);  $indx++)
+    { @mysql_data_seek($result, $indx); $data = mysql_fetch_assoc($result); $settings[$data['dataKey']] = $data['data']; }
+//    print_r($settings);
+
+
+
+        @closeConn($dbLink);
+    }
+
+
+
+
+    unset($_SERVER['PHP_AUTH_USER']); unset($_SERVER['PHP_AUTH_PW']); include 'head_s.shtml';
+
+	$dbLink = openConn();
+	$result = mysql_query('SELECT COUNT(*) FROM registration WHERE tourney = "' . $tourneyID . '";', $dbLink);
+	$data = mysql_fetch_row($result); $counts['registration'] = $data[0]; unset($data); @mysql_free_result($result);
+	$result = mysql_query('SELECT COUNT(*) FROM scores WHERE tourney = "' . $tourneyID . '";', $dbLink);
+	$data = mysql_fetch_row($result); $counts['scores'] = $data[0]; unset($data); @mysql_free_result($result);
+	$result = mysql_query('SELECT COUNT(*) FROM participants WHERE tourney = "' . $tourneyID . '";', $dbLink);
+	$data = mysql_fetch_row($result); $counts['participants'] = $data[0]; unset($data); @mysql_free_result($result);
+	$result = mysql_query('SELECT COUNT(*) FROM rounds WHERE tourney = "' . $tourneyID . '";', $dbLink);
+	$data = mysql_fetch_row($result); $counts['rounds'] = $data[0]; unset($data); @mysql_free_result($result);
+	$result = mysql_query('SELECT COUNT(*) FROM teams WHERE tourney = "' . $tourneyID . '";', $dbLink);
+	$data = mysql_fetch_row($result); $counts['teams'] = $data[0]; unset($data); @mysql_free_result($result);
+
+	$result = mysql_query('SELECT COUNT(*) FROM registration_bu WHERE tourney = "' . $tourneyID . '";', $dbLink);
+	$data = mysql_fetch_row($result); $counts['registration_bu'] = $data[0]; unset($data); @mysql_free_result($result);
+	$result = mysql_query('SELECT COUNT(*) FROM scores_bu WHERE tourney = "' . $tourneyID . '";', $dbLink);
+	$data = mysql_fetch_row($result); $counts['scores_bu'] = $data[0]; unset($data); @mysql_free_result($result);
+	$result = mysql_query('SELECT COUNT(*) FROM participants_bu WHERE tourney = "' . $tourneyID . '";', $dbLink);
+	$data = mysql_fetch_row($result); $counts['participants_bu'] = $data[0]; unset($data); @mysql_free_result($result);
+	$result = mysql_query('SELECT COUNT(*) FROM rounds_bu WHERE tourney = "' . $tourneyID . '";', $dbLink);
+	$data = mysql_fetch_row($result); $counts['rounds_bu'] = $data[0]; unset($data); @mysql_free_result($result);
+	$result = mysql_query('SELECT COUNT(*) FROM teams_bu WHERE tourney = "' . $tourneyID . '";', $dbLink);
+	$data = mysql_fetch_row($result); $counts['teams_bu'] = $data[0]; unset($data); @mysql_free_result($result);
+	@closeConn($dbLink);
+
+?>
+
+ <table border="0" width="840" cellpadding="0" cellspacing="0" style="margin-top:25px;">
+ <col width="6" /><col width="200" /><col width="217" /><col width="417" />
+
+
+ <tr>
+    <td width="840" style="width:840px;background-color:transparent;height:1em;" colspan="4"></td>
+ </tr>
+
+
+   <tr>
+     <td width="6" style="width:6px;background-color:rgb(100,0,0);"></td>
+     <td width="834" style="width:834px;" colspan="3"><div style="margin-left:10px;"><span class="redtext14">Pre Tournament Operations (<?php echo $whoAmI; ?>)</span></div></td>
+   </tr>
+   <tr>
+     <td width="840" height="1" style="height:1px;width:840px;background-color:rgb(100,0,0);" colspan="4"></td>
+   </tr>
+   <tr>
+      <td width="840" style="width:840px;background-color:transparent;height:3px;" colspan="4"></td>
+   </tr>
+   <tr>
+        <td></td>
+        <td colspan="3">
+        	<p class="pblktext12">
+        		<a href="addSchool.shtml">Add/Edit schools, participants, teams, team IDs</a><br />
+        		<a href="builder.shtml">Build Scoring Selectors data</a> (use any time the schools/teams/participants are modified)<br />
+        		<a href="teamPairings.shtml">Modify Team Pairings in a round</a>
+        	</p>
+        	<p class="pblktext12">
+        		<a href="moreMain.shtml">More functions, organized inexplicably</a><br />
+        	</p>
+            <p class="pblktext12">
+        		<a href="matchups.php?view=rounds">View Rounds</a><br />
+                <a href="matchups.php?view=teams">Teams Table</a><br />
+                <!-- <a href="">Edit Matchups</a><br /> -->
+                <a href="matchups.php?view=post">New Matchups</a><br />
+        	</p>
+        </td>
+   </tr>
+
+
+
+
+
+   <tr>
+        <td></td>
+        <td colspan="3"><div style="padding-top:1em;"><p class="pblktext12"><b>Record counts:</b><br />Schools: <?php echo $counts['registration']; ?>&nbsp;&nbsp;&nbsp;&nbsp;Participants: <?php echo $counts['participants']; ?>&nbsp;&nbsp;&nbsp;&nbsp;Teams: <?php echo $counts['teams']; ?>&nbsp;&nbsp;&nbsp;&nbsp;Rounds: <?php echo $counts['rounds']; ?>&nbsp;&nbsp;&nbsp;&nbsp;Scores: <?php echo $counts['scores']; ?><br />Archive Schools: <?php echo $counts['registration_bu']; ?>&nbsp;&nbsp;&nbsp;&nbsp;Archive Participants: <?php echo $counts['participants_bu']; ?>&nbsp;&nbsp;&nbsp;&nbsp;Archive Teams: <?php echo $counts['teams_bu']; ?>&nbsp;&nbsp;&nbsp;&nbsp;Archive Rounds: <?php echo $counts['rounds_bu']; ?>&nbsp;&nbsp;&nbsp;&nbsp;Archive Scores: <?php echo $counts['scores_bu']; ?></p></div></td>
+   </tr>
+
+
+
+
+
+ <tr>
+    <td width="840" style="width:840px;background-color:transparent;height:2em;" colspan="4"></td>
+ </tr>
+
+
+
+
+
+
+   <tr>
+     <td width="6" style="width:6px;background-color:rgb(100,0,0);"></td>
+     <td width="834" style="width:834px;" colspan="3"><div style="margin-left:10px;"><span class="redtext14">Scoring Operations</span></div></td>
+   </tr>
+   <tr>
+     <td width="840" height="1" style="height:1px;width:840px;background-color:rgb(100,0,0);" colspan="4"></td>
+   </tr>
+   <tr>
+     <td width="840" height="1" style="height:.5em;width:840px;background-color:transparent;" colspan="4"></td>
+   </tr>
+   <tr>
+        <td></td>
+        <td colspan="3">
+        	<p class="pblktext12">
+        		<a href="setRound.shtml">Change the round for scoring</a>
+        	</p>
+        	<p class="pblktext12">
+        		<a href="teamSelectors.shtml">Enter Scores for the current round only</a><br />
+        		<a href="review.shtml">Edit scores in any round</a><br />
+        	</p>
+        	<p class="pblktext12">
+        		<a href="precheck.shtml">Check Prelim scores for errors</a><br />
+        		<a href="listScores.shtml">Review All Scores in one page</a><br />
+        	</p>
+        </td>
+   </tr>
+
+
+
+
+
+ <tr>
+    <td width="840" style="width:840px;background-color:transparent;height:2em;" colspan="4"></td>
+ </tr>
+
+
+
+
+
+
+   <tr>
+     <td width="6" style="width:6px;background-color:rgb(100,0,0);"></td>
+     <td width="834" style="width:834px;" colspan="3"><div style="margin-left:10px;"><span class="redtext14">Reports</span></div></td>
+   </tr>
+   <tr>
+     <td width="840" height="1" style="height:1px;width:840px;background-color:rgb(100,0,0);" colspan="4"></td>
+   </tr>
+   <tr>
+     <td width="840" height="1" style="height:.5em;width:840px;background-color:transparent;" colspan="4"></td>
+   </tr>
+   <tr>
+        <td></td>
+        <td colspan="3">
+        	<p class="pblktext12">
+        		<a href="refigure.shtml">Recompute W-T-L and PD</a> (If you are still entering scores, you have to run this to update the statistics before viewing reports.)<br />
+        	</p>
+        	<p class="pblktext12">
+        		<a href="listSchool.shtml">Generate School Report</a><br />
+        		<a href="showResultsP.shtml">List Current Team rankings</a><br />
+        		<a href="showOrators.shtml">List Orator Rankings</a><br />
+        		<a href="showSchools.shtml">List School Rankings</a><br />
+        	</p>
+        	<p class="pblktext12">
+        		<a href="exportFinalResults.php">Export the Final Scores, Rankings and Statistics</a> in Excel. (After the tournament is over.)<br />
+        	</p>
+        </td>
+   </tr>
+
+
+
+
+
+
+
+
+
+ <tr>
+    <td width="840" style="width:840px;background-color:transparent;height:2em;" colspan="4"></td>
+ </tr>
+
+
+ </table>
+
+
+<?php include 'foot.shtml'; ?>
+

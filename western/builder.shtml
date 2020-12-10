@@ -1,0 +1,77 @@
+<?php
+
+    include 'common.php';
+
+//    if ($_SERVER['SERVER_PORT'] != 443) { header('Location: ' . $serverPathS . $_SERVER['REQUEST_URI']); exit(); }
+
+    $userCode = verifySignIn();
+    if (($userCode === false) || ($userCode < 2)) { header('Location: '. $fullPath); exit; }
+
+
+
+
+function GetRoundValue()
+{
+         global $dbLink, $dbSelected, $round;
+         $result = mysql_query('SELECT data FROM preferences WHERE dataKey = "currentRound" WHERE tourney="' . $tourneyID . '";', $dbLink);
+         if (mysql_affected_rows($dbLink) != 1)
+         { $answer = false; }
+         else
+         {  $data = mysql_fetch_row($result); $answer = $data[0]; unset($data); @mysql_free_result($result);  }
+         return $answer;         
+}
+
+
+    $dbLink = openConn();
+
+
+
+        $result = mysql_query('SELECT team_ID, student_ID1, student_ID2 FROM teams WHERE tourney = "' . $tourneyID . '" AND present="1" ORDER BY team_ID;', $dbLink);
+        for ($indx = 0; $indx < mysql_num_rows($result); $indx++)
+        {
+            @mysql_data_seek($result, $indx); $data = mysql_fetch_row($result);
+            if ($data[0] > 0)
+            {
+                $teamList[$data[0]][0] = trim($data[1]); $teamList[$data[0]][1] = trim($data[2]);
+                $allStudents[$data[1]] = trim($data[0]); $allStudents[$data[2]] = trim($data[0]);
+                $teamsOnly[$data[0]] = $data[0];
+            } unset($data);
+        }
+        @mysql_free_result($result);
+
+
+
+        $result = mysql_query('SELECT p.student_ID, p.name FROM participants AS p, teams AS t WHERE (p.tourney = "' . $tourneyID . '" AND t.tourney = p.tourney) AND (t.student_ID1 = p.student_ID OR t.student_ID2 = p.student_ID) AND t.present = "1" ORDER BY p.student_ID;', $dbLink);
+        for ($indx = 0; $indx < mysql_num_rows($result); $indx++)
+        {
+            @mysql_data_seek($result, $indx); $data = mysql_fetch_row($result);
+            $players[$data[0]] = trim($data[1]); unset($data);
+        }
+        @mysql_free_result($result);
+
+
+
+        $corpus = '';
+        foreach($teamsOnly as $value)
+        {
+            if (array_key_exists(intval($value), $teamList))
+            { $corpus .= '<option value="' . $value . '">T' . sprintf('%03d', $value) . ': ' . $players[$teamList[intval($value)][0]] . ' - '. $players[$teamList[intval($value)][1]] . '</option>'; }
+        }
+        @mysql_query('UPDATE texts SET corpus = "' . mysql_escape_string($corpus) . '" WHERE tourney = "' . $tourneyID . '" AND id = "100";', $dbLink);
+
+
+
+        asort($allStudents); asort($players); $corpus = '';
+        foreach($players as $key => $value)
+        {
+            if (array_key_exists($key, $allStudents))
+            { $corpus .= '<option value="' . $allStudents[$key] . '">' . $value . '</option>'; }    
+        }
+        @mysql_query('UPDATE texts SET corpus = "' . mysql_escape_string($corpus) . '" WHERE tourney = "' . $tourneyID . '" AND id = "101";', $dbLink);
+        unset($teams); unset($players); unset($teamList);
+        
+@closeConn($dbLink);
+
+        header('Location: ' . $fullPathSA);
+
+?>

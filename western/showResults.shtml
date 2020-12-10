@@ -1,0 +1,127 @@
+<?php
+
+    include 'common.php';
+
+    $whom = false; $pass = false; $userCode = false;
+    $userCode = verifySignIn();
+    if (($userCode === false) || ($userCode < 2)) { header('Location: '. $fullPath); exit; }
+
+    include 'head_s.shtml';
+
+
+
+
+    $dbLink = openConn();
+    $result = mysql_query('SELECT data FROM preferences WHERE dataKey = "prelimRounds" AND tourney="' . $tourneyID . '";', $dbLink);
+    $data = mysql_fetch_row($result); @mysql_free_result($result); $prelimCount = $data[0]; unset($data);
+    $result = mysql_query('SELECT data FROM preferences WHERE dataKey = "currentRound" AND tourney="' . $tourneyID . '";', $dbLink); $data = mysql_fetch_row($result); @mysql_free_result($result);
+    switch ($data[0])
+    {
+        case 0: { $theRound = 'Pre-Competition'; break; }
+        case 1: { $theRound = 'Final Round'; break; }
+        case 2: { $theRound = 'Semifinal Round'; break; }
+        case 3: { $theRound = 'Quarterfinal Round'; break; }
+        case 4: { $theRound = 'Round of Sixteen'; break; }
+        case 5: { $theRound = 'Round of Thirty-Two'; break; }
+        case 6: { $theRound = 'Round of Sixty-Four'; break; }
+        case -1: { $theRound = 'Preliminary Round I'; break; }
+        case -2: { $theRound = 'Preliminary Round II'; break; }
+        case -3: { $theRound = 'Preliminary Round III'; break; }
+        case -4: { $theRound = 'Preliminary Round IV'; break; }
+        case -5: { $theRound = 'Preliminary Round V'; break; }
+    }
+    $theRoundID = $data[0]; unset($data); $colspan = 4;
+
+?>
+
+ <table border="0" width="690" cellpadding="0" cellspacing="0" style="margin-top:.5em;">
+ <col width="40" /><col width="250" /><col width="250" /><col width="150" />
+
+ <tr>
+ <td width="690" style="width:690px;" colspan="<?php echo $colspan; ?>"><div style="margin-bottom:1em;"><span class="blktext10"><a href="<?php echo $fullPathSA; ?>">Back to the admin page</a></span></div></td>
+ </tr>
+ <tr>
+ <td width="690" style="width:690px;" colspan="<?php echo $colspan; ?>"><div style="text-align:center;"><span class="redtext18">Final Rankings</em></span></div></td>
+ </tr>
+ <tr>
+ <td width="690" height="1" style="height:1px;width:690px;background-color:rgb(100,0,0);" colspan="<?php echo $colspan; ?>"></td>
+ </tr>
+ <tr>
+ <td width="690" height="20" style="height:20px;width:690px;background-color:transparent;" colspan="<?php echo $colspan; ?>"></td>
+ </tr>
+ 
+ <tr>
+    <td style="text-align:center;"><span class="blktext12">Rank</span></td>
+    <td style="text-align:center;"><span class="blktext12">Team</span></td>
+    <td style="text-align:center;"><span class="blktext12">School</span></td>
+    <td style="text-align:center;"><span class="blktext12">W-L-T (PD)</span></td>
+ </tr>    
+
+<?php
+
+    $rTeams = mysql_query('SELECT teams.team_ID, teams.student_ID1, teams.student_ID2, registration.school FROM teams, registration WHERE (teams.tourney="' . $tourneyID . '" AND teams.present="1") AND (registration.tourney="' . $tourneyID . '" AND registration.id=teams.school_ID) ORDER BY teams.team_ID;', $dbLink);
+    for ($indx = 0; $indx < mysql_num_rows($rTeams); $indx++)
+    {
+        @mysql_data_seek($rTeams, $indx); $data = mysql_fetch_row($rTeams);
+        $result2 = mysql_query('SELECT name FROM participants WHERE student_ID = "' . $data[1] . '" AND tourney = "' . $tourneyID . '";', $dbLink);
+        $result3 = mysql_query('SELECT name FROM participants WHERE student_ID = "' . $data[2] . '" AND tourney = "' . $tourneyID . '";', $dbLink);
+        $stu1 = mysql_fetch_row($result2); $stu2 = mysql_fetch_row($result3); $teams[$data[0]][0] = $stu1[0]; $teams[$data[0]][1] = $stu2[0]; $teams[$data[0]][2] = $data[3];
+        @mysql_free_result($result2); @mysql_free_result($result3); unset($data); unset($stu1); unset($stu2);
+    }
+    @mysql_free_result($rTeams);
+
+
+    $noColor = true; $rank = 0;
+    $result = mysql_query('SELECT corpus FROM texts WHERE tourney = "' . $tourneyID . '" AND id = "5' . $prelimCount . '";', $dbLink);
+    $data = mysql_fetch_row($result); @mysql_free_result($result); $datum = $data[0]; unset($data); $selectors = explode(';', $datum);
+    switch ($prelimCount)
+    {
+        case 1: { $partA = 'pd1,'; $partB = 'pd1'; $indxA = 6; break; }
+        case 2: { $partA = 'pd1, pd2,'; $partB = 'pd1 + pd2'; $indxA = 7; break;  }
+        case 3: { $partA = 'pd1, pd2, pd3,'; $partB = 'pd1 + pd2 + pd3'; $indxA = 8; break;  }
+        case 4: { $partA = 'pd1, pd2, pd3, pd4,'; $partB = 'pd1 + pd2 + pd3 + pd4'; $indxA = 9; break;  }
+        case 5: { $partA = 'pd1, pd2, pd3, pd4, pd5,'; $partB = 'pd1 + pd2 + pd3 + pd4 + pd5'; $indxA = 10; break;  }
+    }
+
+  for($loop = 0; $loop < sizeof($selectors); $loop++)
+  {
+    
+    $data = $selectors[$loop]; $subs = explode(',',$data);
+    $job = 'SELECT team_ID, win, loss, tie, (SUM( ' . $partB . ' ) / ' . $prelimCount . ') AS total FROM teams WHERE (win =  "' . $subs[0] . '" AND loss = "' . $subs[1] . '" AND tie = "' . $subs[2] . '") AND tourney = "' . $tourneyID . '" GROUP BY team_ID ORDER BY total DESC ;';
+    $result = mysql_query($job, $dbLink); unset($subs); $wasData = false;
+    if (mysql_num_rows($result) > 0)
+    {
+        $wasData = true;
+        for($indx = 0; $indx < mysql_num_rows($result); $indx++)
+        {
+            $noColor = !$noColor; if (!$noColor) { $option = ' style="background-color:rgb(220,220,220);"'; } else { $option = ''; }
+            @mysql_data_seek($result, $indx); $data = mysql_fetch_row($result); echo '<tr' . $option . '>' . chr(13);
+            echo '  <td style="text-align:center;"><span class="blktext12">' . ++$rank . '</span></td>' . chr(13);
+            echo '  <td style="text-align:center;"><div style="margin:.25em;"><p class="blktext12">' . $teams[$data[0]][0] . '<br />' . $teams[$data[0]][1] . '<br />( Team ' . $data[0] . ' )</p></div></td>' . chr(13);
+            echo '  <td style="text-align:center;"><p class="blktext12">' . $teams[$data[0]][2] . '</p></td>' . chr(13);
+            echo '  <td style="text-align:center;"><span class="blktext12">' . $data[1] . '-' . $data[2] . '-' . $data[3] . '&nbsp;&nbsp;(' . sprintf('%01.3f', $data[4]) . ')</span></td>' . chr(13);
+            echo '</tr>';
+        }
+    }
+    
+    if ($wasData === true)
+    {
+    ?><tr><td colspan="<?php echo $colspan; ?>" style="background-color:transparent;height:3px;"></td></tr>
+    <tr><td colspan="<?php echo $colspan; ?>" style="background-color:rgb(100,0,0);height:1px;"></td></tr>
+    <tr><td colspan="<?php echo $colspan; ?>" style="background-color:transparent;height:3px;"></td></tr><?php
+    }
+    
+  }
+    unset($selectors);
+    @closeConn($dbLink);
+
+
+
+?>
+
+
+   <tr>
+     <td width="690" height="20" style="height:20px;width:690px;background-color:transparent;" colspan="8"></td>
+   </tr>
+</table> 
+ 

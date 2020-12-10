@@ -1,0 +1,136 @@
+<?php
+
+    $err = error_reporting(2047);
+        include 'common.php';
+
+//      if ($_SERVER['SERVER_PORT'] != 443) { header('Location: ' . $serverPathS . $_SERVER['REQUEST_URI']); exit(); }
+
+
+function UpdateTeamRecord($teamA, $teamB)
+{
+    global $dbLink, $round, $tourneyID;
+
+
+echo $tourneyID . '<br />';
+
+//    $tourneyID = 1;
+    $result = mysql_query('SELECT total, judge FROM scores WHERE team_ID = "' . $teamA . '" AND round = "' . $round . '" AND tourney="' . $tourneyID . '" ORDER BY judge;', $dbLink);
+    $avg = 0; $totalsA = array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0); $totalsB = array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    for($indx = 0; $indx < mysql_num_rows($result); $indx++)
+    {  @mysql_data_seek($result, $indx); $data = mysql_fetch_row($result); $totalsA[$data[1]] += $data[0]; unset($data);  }
+    @mysql_free_result($result);
+    
+    $result = mysql_query('SELECT total, judge FROM scores WHERE team_ID = "' . $teamB . '" AND round = "' . $round . '" AND tourney="' . $tourneyID . '" ORDER BY judge;', $dbLink);
+    for($indx = 0; $indx < mysql_num_rows($result); $indx++)
+    {  @mysql_data_seek($result, $indx); $data = mysql_fetch_row($result); $totalsB[$data[1]] += $data[0]; unset($data);  }
+    @mysql_free_result($result);
+    
+
+    $column = 'pre' . abs($round);
+
+    $wins[0] = 0; $wins[1] = 0; $pd[0] = 0; $pd[1] = 0; $judgeCount = 0;
+    
+    for ($indx = 1; $indx < 21; $indx++)
+    {
+        if ($totalsA[$indx] != 0 || $totalsB[$indx] != 0)
+        {
+            $avgs[$indx] = ($totalsA[$indx] + $totalsB[$indx]) / 2; $judgeCount += 1;
+            echo 'J' . $indx . ': ' . 'T' . $teamA . ': ' . $totalsA[$indx] . ' T' . $teamB . ': ' . $totalsB[$indx] . '<br/>';
+            if ($totalsA[$indx] > $totalsB[$indx]) 
+                { $wins[0] += 1; }
+            elseif ($totalsA[$indx] < $totalsB[$indx]) 
+                { $wins[1] += 1; }
+            elseif ($totalsA[$indx] == $totalsB[$indx]) 
+                { $wins[1] += 0.5; $wins[0] += 0.5; }
+        }
+    }
+    $ballotsA = sprintf('%01.3f', (2 / $judgeCount) * $wins[0]); $ballotsB = sprintf('%01.3f', (2 / $judgeCount) * $wins[1]);
+
+    if ($judgeCount == 3)
+    {
+    	if (  ($wins[0] == 2) && ($wins[1] == 1)  )
+    	{  $ballotsA = 1.3400000; $ballotsB = 0.6600000;  }
+
+    	if (  ($wins[0] == 1) && ($wins[1] == 2)  )
+    	{  $ballotsA = 0.6600000; $ballotsB = 1.3400000;  }
+    }
+
+    echo 'Points: T' . $teamA . ': ' . $wins[0] . ' T' . $teamB . ': ' . $wins[1] . '<br />';
+
+    if ($round < 0)
+    { $ballotTextA = 'prelimBallots = prelimBallots + ' . $ballotsA; $ballotTextB = 'prelimBallots = prelimBallots + ' . $ballotsB; }
+    else
+    { $ballotTextA = 'finalsBallots = finalsBallots + ' . $ballotsA; $ballotTextB = 'finalsBallots = finalsBallots + ' . $ballotsB; }
+    echo 'Ballots: T' . $teamA . ': ' . $ballotsA . ' T' . $teamB . ': ' . $ballotsB . '<br />';
+
+
+
+    for ($indx = 1; $indx < 21; $indx++)
+    {
+        $pds[0] += ($totalsA[$indx] - $avgs[$indx]);
+        $pds[1] += ($totalsB[$indx] - $avgs[$indx]);
+    }
+    
+    if ($round < 0) { $option0 = ', pd' . abs($round) . ' = "' . $pds[0] . '"'; $option1 = ', pd' . abs($round) . ' = "' . $pds[1] . '"'; } else { $option0 = ''; $option1 = ''; }
+    if ($wins[0] == $wins[1] && $wins[0] != 0)
+    {
+        $job  = 'UPDATE teams SET tie=tie+1, ' . $column . ' = "' . array_sum($totalsA) . '"' . $option0 . ', ' . $ballotTextA . ' WHERE team_ID = "' . $teamA . '" AND tourney="' . $tourneyID . '";';
+        $job2 = 'UPDATE teams SET tie=tie+1, ' . $column . ' = "' . array_sum($totalsB) . '"' . $option1 . ', ' . $ballotTextB . ' WHERE team_ID = "' . $teamB . '" AND tourney="' . $tourneyID . '";';
+    }
+    elseif ($wins[0] > $wins[1])
+    {
+        $job  = 'UPDATE teams SET win=win+1, ' . $column . ' = "' . array_sum($totalsA) . '"' . $option0 . ', ' . $ballotTextA . ' WHERE team_ID = "' . $teamA . '" AND tourney="' . $tourneyID . '";';
+        $job2 = 'UPDATE teams SET loss=loss+1, ' . $column . ' = "' . array_sum($totalsB) . '"' . $option1 . ', ' . $ballotTextB . ' WHERE team_ID = "' . $teamB . '" AND tourney="' . $tourneyID . '";';
+    }
+    elseif ($wins[1] > $wins[0])
+    {
+        $job  = 'UPDATE teams SET win=win+1, ' . $column . ' = "' . array_sum($totalsB) . '"' . $option1 . ', ' . $ballotTextB . ' WHERE team_ID = "' . $teamB . '" AND tourney="' . $tourneyID . '";';
+        $job2 = 'UPDATE teams SET loss=loss+1, ' . $column . ' = "' . array_sum($totalsA) . '"' . $option0 . ', ' . $ballotTextA . ' WHERE team_ID = "' . $teamA . '" AND tourney="' . $tourneyID . '";';
+    }
+
+    
+    @mysql_query($job, $dbLink); @mysql_query($job2, $dbLink);
+
+//    echo 'job1: ' . $job . '<br />job2: ' . $job2 . '<br /><br /><br />';
+        echo '<br /><br />';
+
+}    
+
+
+
+// *******************************************************************************************
+// *******************************************************************************************
+// *******************************************************************************************
+// *******************************************************************************************
+// *******************************************************************************************
+
+
+
+        $dbLink = openConn();
+        
+        $corpus = mysql_query('SELECT round, team1, team2 FROM rounds WHERE tourney="' . $tourneyID . '" ORDER BY round;', $dbLink);
+        @mysql_query('UPDATE teams SET win="0", tie="0", loss="0", prelimBallots="0" WHERE tourney = "' . $tourneyID . '";', $dbLink);
+        @mysql_query('UPDATE scores SET total = knowledge + response + forensics + demeanor WHERE tourney = ' . $tourneyID . ';', $dbLink);
+        for ($outerLoop = 0; $outerLoop < mysql_num_rows($corpus); $outerLoop++)
+        {
+            @mysql_data_seek($corpus, $outerLoop); $data = mysql_fetch_assoc($corpus); $round = $data['round'];
+            echo 'Round ' . $data['round'] . ': T' . $data['team1'] . ' v. T' . $data['team2'] . '<br />';
+            @UpdateTeamRecord($data['team1'], $data['team2']); echo chr(13).chr(13).chr(13).chr(13);
+        }
+
+
+
+
+        @closeConn($dbLink);
+        echo 'Done.';
+
+
+
+
+
+
+
+
+
+
+

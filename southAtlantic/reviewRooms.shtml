@@ -1,0 +1,76 @@
+<?php
+
+    include 'common.php';
+
+    if ($_SERVER['SERVER_PORT'] != 443) { header('Location: ' . $serverPathS . $_SERVER['REQUEST_URI']); exit(); }
+
+    $userCode = verifySignIn();
+    if (($userCode === false) || ($userCode < 2)) { header('Location: '. $fullPath); exit; }
+    
+    if ($userCode < 2) { header('Location: ' . $fullPath . '?2'); exit(); }
+
+
+                $dbLink = openConn();
+                $result = mysql_query('SELECT id, abbr FROM buildings;', $dbLink);
+                for ($indx = 0; $indx < mysql_num_rows($result); $indx++)
+                { @mysql_data_seek($result, $indx); $data = mysql_fetch_row($result); $bldgs[$data[1]] = $data[0]; $bldgs2[$data[0]] = $data[1]; unset($data); } @mysql_free_result($result);
+                $update = mysql_query('SELECT * FROM rooms;', $dbLink); $flag = true;
+                @closeConn($dbLink);
+
+    include 'head_s.shtml';
+
+?>
+
+
+    <form enctype="multipart/form-data" action="<?php echo $_SERVER['REQUEST_URI']; ?>" method="post"><input type="hidden" value="1" name="validated" id="validated" />
+ <table border="0" width="840" cellpadding="0" cellspacing="0" style="margin-top:25px;">
+ <col width="6" /><col width="200" /><col width="217" /><col width="417" />
+
+
+ <tr>
+ <td width="<?php echo $maxSize; ?>" style="width:<?php echo $maxSize; ?>px;" colspan="4"><div style="margin-bottom:1em;"><span class="blktext10"><a href="<?php echo $fullPathSA; ?>">Back to the admin page</a></span></div></td>
+ </tr>
+
+
+   <tr>
+     <td width="6" style="width:6px;background-color:rgb(100,0,0);"></td>
+     <td width="834" style="width:834px;" colspan="3"><div style="margin-left:10px;"><span class="redtext14">Review Room/Building Data</span></div></td>
+   </tr>
+   <tr>
+     <td width="840" height="1" style="height:1px;width:840px;background-color:rgb(100,0,0);" colspan="4"></td>
+   </tr>
+   <tr>
+      <td width="840" style="width:840px;background-color:transparent;height:3px;" colspan="4"></td>
+   </tr>
+
+<?php
+
+            echo '   <tr>';
+            echo '      <td width="840" style="width:840px;background-color:transparent;" colspan="4"><div style="margin-top:.75em;"></div></td>';
+            echo '   </tr>'; $a = '&nbsp;&nbsp;';
+
+            for ($indx = 0; $indx < mysql_num_rows($update); $indx++)
+            {
+                @mysql_data_seek($update, $indx); $data = mysql_fetch_assoc($update);
+                echo '<tr><td colspan="4"><span class="pblktext12">';
+                echo '#' . sprintf('%02d', intval($indx + 1)) . ':' . $a . $bldgs2[$data['building_ID']] . ' ' . $data['roomNumber'] . ':' . $a . 'P1:' . $data['pre1'] . $a . 'P2:' . $data['pre2'];
+                echo $a . 'P3:' . $data['pre3'] . $a . 'P4:' . $data['pre4'] . $a . 'P5:' . $data['pre5'];
+                echo $a . '64:' . $data['rnd64'] . $a . '32:' . $data['rnd32'] . $a . '16:' . $data['sixteen'] . $a . 'Q:' . $data['quarter'] . $a . 'S:' . $data['semi'] . $a . 'F:' . $data['final'] . $a . 'Bye:' . $data['bye'] . '</span></td></tr>';
+                unset($data);
+            }
+            @mysql_free_result($update);
+
+
+?>
+
+
+
+ <tr>
+    <td width="840" style="width:840px;background-color:transparent;height:2em;" colspan="4"></td>
+ </tr>
+
+
+ </table>
+    </form>
+
+<?php include 'foot.shtml'; ?>

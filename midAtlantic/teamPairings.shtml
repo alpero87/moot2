@@ -1,0 +1,200 @@
+<?php
+
+/*
+
+                Future revision:
+                * Add New Teams: generate enough spare teams to give them the maximum allowed (5 registered + 3 new = 8 maximum per school)
+
+
+*/
+    include 'common.php';
+
+    $whom = false; $pass = false; $userCode = false; $flag = false; $errorsPresent = false; $noRoundData = false; $pairCount = -1;
+    $userCode = verifySignIn();
+    if (($userCode === false) || ($userCode < 2)) { header('Location: '. $fullPath); exit; }
+
+
+    $dbLink = openConn();
+    if (isset($_POST['job']))
+    {
+        switch($_POST['job'])
+        {
+            case 'Select':
+            {
+                $teams = mysql_query('SELECT team1, team2, location, building_ID FROM rounds WHERE tourney = "' . $tourneyID . '" AND round = "' . $_POST['roundL'] . '";', $dbLink);
+                $result = mysql_query('SELECT COUNT(*) FROM teams WHERE tourney = "' . $tourneyID . '" AND present = "1";', $dbLink);	$noRoundData = false;
+                $data = mysql_fetch_row($result); @mysql_free_result($result); $pairCount = $data[0] * .5; unset($data);
+                if (mysql_num_rows($teams) == 0)	{	$noRoundData = true;	}
+                break;
+            }
+            
+            case 'Save data':
+            {
+                $countr = $_POST['rowCount']; $roundChoice = $_POST['round2'];
+                $result = mysql_query('SELECT team_ID FROM teams WHERE tourney = "' . $tourneyID . '" AND present = "1";', $dbLink);
+                for($indx = 0; $indx < mysql_num_rows($result); $indx++)
+                { @mysql_data_seek($result, $indx); $data = mysql_fetch_row($result); $teamRay[$data[0]] = 0; unset($data); }
+                @mysql_free_result($result);
+                for($indx = 0; $indx< $countr; $indx++)
+                {
+                    $badT1 = array_key_exists($_POST['m' . $indx . 't1'], $teamRay); $badT2 = array_key_exists($_POST['m' . $indx . 't2'], $teamRay);
+                    $teamRay[$_POST['m' . $indx . 't1']] += 1; $teamRay[$_POST['m' . $indx . 't2']] += 1;
+                    if ( !$badT1 || !$badT2 )
+                    {
+                        $errorsPresent = true;
+                        if (!$badT1) { $errStrings[] = 'The opponent of team ' . $_POST['m' . $indx . 't2'] . ' was invalid.'; }
+                        if (!$badT2) { $errStrings[] = 'The opponent of team ' . $_POST['m' . $indx . 't1'] . ' was invalid.'; }
+                    }
+                }
+                foreach($teamRay as $key => $value)
+                { if ($value != 1) { $errStrings[] = 'Team ' . $key . ' was assigned ' . $value . ' times.'; $errorsPresent = true; } }
+                
+
+                if (!$errorsPresent)
+                {
+                    @mysql_query('DELETE FROM rounds WHERE tourney = "' . $tourneyID . '" AND round = "' . $roundChoice . '";', $dbLink);
+                    for ($indx = 0; $indx < $countr; $indx++)
+                    {
+                        $bldg  = $_POST['m' . $indx . 'B']; $loc  = $_POST['m' . $indx . 'L']; $t1  = $_POST['m' . $indx . 't1']; $t2  = $_POST['m' . $indx . 't2'];
+                        @mysql_query('INSERT INTO rounds VALUES("' . $tourneyID . '", "' . $roundChoice . '", "' . $t1 . '", "' . $t2 . '", "' . $loc . '", "' . $bldg . '", "0");', $dbLink);
+                    }
+                    @mysql_query('OPTIMIZE TABLE rounds;', $dbLink);
+                }
+                else
+                {
+	                $teams = mysql_query('SELECT team1, team2, location, building_ID FROM rounds WHERE tourney = "' . $tourneyID . '" AND round = "' . $_POST['roundL'] . '";', $dbLink);
+    	            $result = mysql_query('SELECT COUNT(*) FROM teams WHERE tourney = "' . $tourneyID . '" AND present = "1";', $dbLink);	$noRoundData = false;
+        	        $data = mysql_fetch_row($result); @mysql_free_result($result); $pairCount = $data[0] * .5; unset($data);
+            	    if (mysql_num_rows($teams) == 0)	{	$noRoundData = true;	}
+                }
+                break;
+                
+            }
+        }
+    }
+    
+    $result = mysql_query('SELECT data FROM preferences WHERE tourney = "' . $tourneyID . '" AND dataKey = "prelimRounds";', $dbLink);
+    $data = mysql_fetch_row($result); $prelims = $data[0]; unset($data); @mysql_free_result($result);
+    $result = mysql_query('SELECT data FROM preferences WHERE tourney = "' . $tourneyID . '" AND dataKey = "finalRounds";', $dbLink);
+    $data = mysql_fetch_row($result); $finals = $data[0]; unset($data); @mysql_free_result($result);
+    @closeConn($dbLink);
+
+    if (isset($_POST['roundL'])) { $roundChoice = $_POST['roundL']; } else { $roundChoice = false; }
+    include 'head_s.shtml';
+?>
+
+<script language="Javascript">
+<!--
+
+  document.cookie='acmaJSon=1';
+
+// -->
+</script>
+
+<form action="<?php echo $serverPathA . $_SERVER['REQUEST_URI']; ?>" method="post">
+    <table border="0" width="840" cellpadding="0" cellspacing="0">
+    <col width="6" /><col width="200" /><col width="217" /><col width="417" />
+
+    <tr>
+        <td width="840" style="width:690px;" colspan="4"><div style="margin-bottom:1em;"><span class="blktext10"><a href="<?php echo $fullPathSA; ?>">Back to the admin page</a></span></div></td>
+    </tr>
+    <tr><td width="840" style="width:840px;background-color:transparent;height:2em;" colspan="4"></td></tr>
+
+
+    <tr>
+        <td width="6" style="width:6px;background-color:rgb(100,0,0);"></td>
+        <td width="834" style="width:834px;" colspan="3"><div style="margin-left:10px;"><span class="redtext14">Team Pairings</span></div></td>
+    </tr>
+    <tr>
+        <td width="840" height="1" style="height:1px;width:840px;background-color:rgb(100,0,0);" colspan="4"></td>
+    </tr>
+    <tr>
+        <td width="840" style="width:840px;background-color:transparent;height:3px;" colspan="4"></td>
+    </tr>
+    <tr>
+        <td colspan="4"><div style="text-align:center;margin-top:1em;"><p class="pblktext12">Select a round:<select style="margin-left:1em;" name="roundL" id="roundL"><?php
+
+            for ($indx = 0; $indx < $prelims; $indx++)
+            {
+                $id = intval($indx + 1);
+                echo '<option value="' . -$id; if ($roundChoice !== false) { if ($roundChoice == -$id) { echo '" selected="selected'; } }
+                echo '">Prelim Round ' . $id . '</option>';
+                unset($data);
+            }
+            $finalC[1] = 'Final Round'; $finalC[2] = 'Semifinal Round'; $finalC[3] = 'Quarter Finals Round'; $finalC[4] = 'Round of 16'; $finalC[5] = 'Round of 32'; $finalC[6] = 'Round of 64';
+            for ($indx = $finals; $indx > 0; $indx--)
+            {
+                echo '<option value="' . $indx; if ($roundChoice !== false) { if ($roundChoice == $indx) { echo '" selected="selected'; } }
+                echo '">' . $finalC[$indx] . '</option>';
+                unset($data);
+            }
+        
+        ?></select><input type="submit" id="job" name="job" value="Select" style="margin-left:1em;" /></p></div></td>
+    </tr>
+<?php
+
+        if ($errorsPresent)
+        {
+            echo '    <tr>' . chr(13) . '        <td colspan="4"><div style="text-align:center;margin-top:1em;"><p class="blktext12">The following errors occurred:<br /><span class="pblktext12">';
+            foreach($errStrings as $value) { echo $value . '<br />'; }
+            echo '<span class="blktext12">NO CHANGES WERE SAVED.</span></span></p></td>' . chr(13) . '    </tr>';
+        }
+
+
+        if ( (mysql_num_rows($teams) > 0) && (!$noRoundData) )
+        {
+//            echo '    <tr>' . chr(13) . '        <td colspan="4"><div style="text-align:center;margin-top:1em;"><input type="hidden" name="rowCount" id="rowCount" value="' . mysql_num_rows($teams) . '" /><input type="hidden" name="round2" id="round2" value="' . $roundChoice . '" />';
+            echo '    <tr>' . chr(13) . '        <td colspan="4"><div style="text-align:center;margin-top:1em;"><input type="hidden" name="rowCount" id="rowCount" value="' . $pairCount . '" /><input type="hidden" name="round2" id="round2" value="' . $roundChoice . '" />';
+            echo '<p class="pblktext12">Saving will replace any existing assignments.</p><p class="pblktext12">Format: Petitioner vs. Respondent</p><p class="pblktext12">'; $flag = true; $countr = 0;
+//            for ($indx = 0; $indx < mysql_num_rows($teams); $indx++)
+            for ($indx = 0; $indx < $pairCount; $indx++)
+            {
+                if ($flag) { @mysql_data_seek($teams, $countr++); $aTeam = mysql_fetch_assoc($teams); }
+                echo '<input type="text" name="m' . $indx. 't1" id="m' . $indx. 't1" value="' . $aTeam['team1'] . '" maxlength="5" size="5" />';
+                echo ' vs. <input type="text" name="m' . $indx . 't2" id="m' . $indx . 't2" value="' . $aTeam['team2'] . '" maxlength="5" size="5" />';
+                echo '<input type="hidden" name="m' . $indx . 'L" id="m' . $indx . 'L" value="' . $aTeam['location'] . '" /><input type="hidden" name="m' . $indx . 'B" id="m' . $indx . 'B" value="' . $aTeam['building_ID'] . '" /><br />';
+                unset($aTeam);
+            }
+
+            echo '    </p></div>';
+
+			if ($pairCount != mysql_num_rows($teams))
+			{
+	            echo '    <div style="padding-top:1.5em;text-align:center;"><p class="pblktext12">The number of teams has changed. Be sure to review the other rounds to correct those pairings.</p></div>';
+			}
+
+            echo '    <div style="margin-top:3em;text-align:center;"><input type="submit" name="job" id="job"  value="Save data" /><input type="reset" style="margin-left:5em;" value="Reset data" /></div></td>';
+            echo chr(13) . '    </tr>';
+        }
+
+
+        if ($noRoundData)
+        {
+            echo '    <tr>' . chr(13) . '        <td colspan="4"><div style="text-align:center;margin-top:1em;"><input type="hidden" name="rowCount" id="rowCount" value="' . $pairCount . '" /><input type="hidden" name="round2" id="round2" value="' . $roundChoice . '" />';
+            echo '<p class="pblktext12">Saving will replace any existing assignments.</p><p class="pblktext12">Format: Petitioner vs. Respondent</p><p class="pblktext12">'; $flag = true; $countr = 0;
+            for ($indx = 0; $indx < $pairCount; $indx++)
+            {
+                echo '<input type="text" name="m' . $indx. 't1" id="m' . $indx. 't1" value="0" maxlength="5" size="5" />';
+                echo ' vs. <input type="text" name="m' . $indx . 't2" id="m' . $indx . 't2" value="0" maxlength="5" size="5" />';
+                echo '<input type="hidden" name="m' . $indx . 'L" id="m' . $indx . 'L" value="0" /><input type="hidden" name="m' . $indx . 'B" id="m' . $indx . 'B" value="0" /><br />';
+                unset($aTeam);
+            }
+            echo '    </p></div><div style="margin-top:3em;text-align:center;"><input type="submit" name="job" id="job"  value="Save data" /><input type="reset" style="margin-left:5em;" value="Reset data" /></div></td>';
+            echo chr(13) . '    </tr>';
+        }
+
+?>
+
+
+
+
+
+ <tr>
+    <td width="840" style="width:840px;background-color:transparent;height:2em;" colspan="4"></td>
+ </tr>
+
+
+ </table>
+</form>
+
+<?php include 'foot.shtml'; ?>

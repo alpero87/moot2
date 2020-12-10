@@ -1,0 +1,89 @@
+<?php
+
+//    if ($_SERVER['SERVER_PORT'] != 443) { header('Location: ' . $serverPathS . $_SERVER['REQUEST_URI']); exit(); }
+
+?><html>
+<head>
+
+<title>American Collegiate Moot Court Association</title>
+<META NAME="Author" CONTENT="mootcourt.fsc.edu">
+<META NAME="Keywords" CONTENT="acma moot court mootcourt simulation court Supreme Court Simulation scholastic moot court court tournaments">
+<META NAME="Description" CONTENT="infomation about moot courts or mootcourts also known as mock supreme courts or simulation courts">
+<META NAME="distribution" CONTENT="global">
+<META NAME="resource-type" CONTENT="document">
+<META NAME="language" CONTENT="en">
+
+<style type="text/css">
+<!--
+
+  .redcell { }
+  .redrow { background-color:rgb(100,0,0); }
+  .redtext10 { font-family:arial,helvetica,verdana,sans-serif;font-weight:bold;font-size:10px;color:rgb(100,0,0); }
+  .redtext12 { font-family:arial,helvetica,verdana,sans-serif;font-weight:bold;font-size:12px;color:rgb(100,0,0); }
+  .redtext14 { font-family:arial,helvetica,verdana,sans-serif;font-weight:bold;font-size:14px;color:rgb(100,0,0); }
+  .redtext18 { font-family:arial,helvetica,verdana,sans-serif;font-weight:bold;font-size:18px;color:rgb(100,0,0); }
+  .blktext10 { font-family:arial,helvetica,verdana,sans-serif;font-weight:bold;font-size:10px;color:rgb(0,0,0); }
+  .blktext12 { font-family:arial,helvetica,verdana,sans-serif;font-weight:bold;font-size:12px;color:rgb(0,0,0); }
+  .blktext14 { font-family:arial,helvetica,verdana,sans-serif;font-weight:bold;font-size:14px;color:rgb(0,0,0); }
+  .blktext18 { font-family:arial,helvetica,verdana,sans-serif;font-weight:bold;font-size:18px;color:rgb(0,0,0); }
+  .predtext10 { font-family:arial,helvetica,verdana,sans-serif;font-weight:normal;font-size:10px;color:rgb(100,0,0); }
+  .predtext12 { font-family:arial,helvetica,verdana,sans-serif;font-weight:normal;font-size:12px;color:rgb(100,0,0); }
+  .predtext14 { font-family:arial,helvetica,verdana,sans-serif;font-weight:normal;font-size:14px;color:rgb(100,0,0); }
+  .predtext18 { font-family:arial,helvetica,verdana,sans-serif;font-weight:normal;font-size:18px;color:rgb(100,0,0); }
+  .pblktext10 { font-family:arial,helvetica,verdana,sans-serif;font-weight:normal;font-size:10px;color:rgb(0,0,0); }
+  .pblktext12 { font-family:arial,helvetica,verdana,sans-serif;font-weight:normal;font-size:12px;color:rgb(0,0,0); }
+  .pblktext14 { font-family:arial,helvetica,verdana,sans-serif;font-weight:normal;font-size:14px;color:rgb(0,0,0); }
+  .pblktext18 { font-family:arial,helvetica,verdana,sans-serif;font-weight:normal;font-size:18px;color:rgb(0,0,0); }
+  .whttext12 { font-family:arial,sans-serif;font-weight:bold;font-size:12px;color:white; }
+  .newLeftCol { text-align:right;width:206px; }
+  .newRightCol { text-align:left;width:634px; }
+  .scheduleLeftCol { text-align:right;width:206px; }
+  .scheduleRightCol { text-align:left;width:634px; }
+  .divT10L20 { margin-top:10px;margin-left:20px; }
+  .divL15T15 { margin-top:10px;margin-left:20px; }
+  .divL15T30 { margin-top:10px;margin-left:20px; }
+  .scheduleRight { text-align:right;margin-right:3px;margin-top:2px;vertical-align:top; }
+  .scheduleLeft  { text-align:left;margin-left:3px;margin-top:2px;vertical-align:top; }
+  a { background-color:transparent;color:blue;text-decoration:none; }
+  a.visit { background-color:transparent;color:blue;text-decoration:none; }
+
+//-->
+</style>
+
+
+<script language="Javascript">
+<!--
+
+  document.cookie='acmaJSon=1';
+
+// -->
+</script>
+
+</head>
+
+
+
+<body bgcolor="#ffffff" text="#000000" alink=#800080 link=#4b0082 vlink=#800080>
+
+ <table border="0" width="840" cellpadding="0" cellspacing="0">
+ <col width="140" /><col width="140" /><col width="140" /><col width="140" /><col width="140" /><col width="140" />
+
+  <tr>
+   <td width="628" height="137" valign="bottom" colspan="2" style="width:840px;vertical-align:bottom;">
+        <img border="0" src="court_1.jpg" width="229" height="161" alt="Court house image" style="margin-right:20px;">
+   </td>
+   <td width="628" height="137" valign="bottom" colspan="4" style="width:840px;vertical-align:bottom;">
+        <div style="margin-bottom:10px;"><span style="font-family:arial;font-weight:bold;font-size:36px;color:rgb(100,0,0);">American Collegiate<br />Moot Court Association</span></div>
+   </td>
+  </tr>
+
+  <tr>
+   <td width="140" height="14" valign="bottom" style="background-color:rgb(100,0,0);color:white;width:140px;vertical-align:middle;"><div style="margin-top:5px;margin-bottom:5px;text-align:center;width:140px;"><span style="font-family:arial;font-weight:bold;font-size:12px;"><a style="color:white;" target="_self" href="http://honors.uta.edu/mootcourt/" title="Go to the American Collegiate Moot Court Association home page">ACMA Home</a></span></div></td>
+   <td width="700" height="14" valign="bottom" style="background-color:rgb(100,0,0);color:white;width:700px;vertical-align:middle;" colspan="3"><div style="margin-top:5px;margin-bottom:5px;text-align:center;width:700px;"></div></td>
+<!--   <td width="140" height="14" valign="bottom" style="background-color:rgb(100,0,0);color:white;width:140px;vertical-align:middle;"><div style="margin-top:5px;margin-bottom:5px;text-align:center;width:140px;"><span style="font-family:arial;font-weight:bold;font-size:12px;"><a style="color:white;" target="_self" href="historic.shtml">Past Tournaments</a></span></div></td>
+   <td width="140" height="14" valign="bottom" style="background-color:rgb(100,0,0);color:white;width:140px;vertical-align:middle;"><div style="margin-top:5px;margin-bottom:5px;text-align:center;width:140px;"><span style="font-family:arial;font-weight:bold;font-size:12px;"><a style="color:white;" target="_self" href="photos.shtml">Photo Gallery</a></span></div></td> -->
+  </tr>
+<!--  <tr><td colspan="8"><div style="text-align:center;margin-top:.5em;"><span class="redtext12">Sponsored by The UTA Honors College, College of Liberal Arts, and Andrew Sommerman, J.D.</span></td></tr> //-->
+ </table>
+
+

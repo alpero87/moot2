@@ -1,0 +1,39 @@
+<?php
+
+
+
+    include 'common.php';
+
+    $userCode = verifySignIn();
+    if ($userCode === false) { header('Location: '. $fullPathSA); exit; }
+
+    $dbLink = openConn();
+
+	@mysql_query('DELETE FROM registration_bu WHERE tourney = "' . $tourneyID . '";', $dbLink);
+	echo 'DELETE FROM registration_bu WHERE tourney = "' . $tourneyID . '": ' . mysql_error($dbLink) . '<br />' . chr(13);
+	@mysql_query('DELETE FROM participants_bu WHERE tourney = "' . $tourneyID . '";', $dbLink);
+	echo 'DELETE FROM participants_bu WHERE tourney = "' . $tourneyID . '": ' . mysql_error($dbLink) . '<br />' . chr(13);
+	@mysql_query('DELETE FROM rounds_bu WHERE tourney = "' . $tourneyID . '";', $dbLink);
+	echo 'DELETE FROM rounds_bu WHERE tourney = "' . $tourneyID . '": ' . mysql_error($dbLink) . '<br />' . chr(13);
+	@mysql_query('DELETE FROM scores_bu WHERE tourney = "' . $tourneyID . '";', $dbLink);
+	echo 'DELETE FROM scores_bu WHERE tourney = "' . $tourneyID . '": ' . mysql_error($dbLink) . '<br />' . chr(13);
+	@mysql_query('DELETE FROM teams_bu WHERE tourney = "' . $tourneyID . '";', $dbLink);
+	echo 'DELETE FROM teams_bu WHERE tourney = "' . $tourneyID . '": ' . mysql_error($dbLink) . '<br />' . chr(13);
+
+	@mysql_query('INSERT INTO registration_bu (SELECT * FROM registration WHERE tourney = "' . $tourneyID . '");', $dbLink);
+	echo 'INSERT INTO registration_bu (SELECT * FROM registration WHERE tourney = "' . $tourneyID . '"): ' . mysql_error($dbLink) . '<br />' . chr(13);
+	@mysql_query('INSERT INTO participants_bu (SELECT * FROM participants WHERE tourney = "' . $tourneyID . '");', $dbLink);
+	echo 'INSERT INTO participants_bu (SELECT * FROM participants WHERE tourney = "' . $tourneyID . '"): ' . mysql_error($dbLink) . '<br />' . chr(13);
+	@mysql_query('INSERT INTO scores_bu (SELECT * FROM scores WHERE tourney = "' . $tourneyID . '");', $dbLink);
+	echo 'INSERT INTO scores_bu (SELECT * FROM scores WHERE tourney = "' . $tourneyID . '"): ' . mysql_error($dbLink) . '<br />' . chr(13);
+	@mysql_query('INSERT INTO teams_bu (SELECT * FROM teams WHERE tourney = "' . $tourneyID . '");', $dbLink);
+	echo 'INSERT INTO teams_bu (SELECT * FROM teams WHERE tourney = "' . $tourneyID . '"): ' . mysql_error($dbLink) . '<br />' . chr(13);
+	@mysql_query('INSERT INTO rounds_bu (SELECT * FROM rounds WHERE tourney = "' . $tourneyID . '");', $dbLink);
+	echo 'INSERT INTO rounds_bu (SELECT * FROM rounds WHERE tourney = "' . $tourneyID . '"): ' . mysql_error($dbLink) . '<br />' . chr(13);
+
+	echo 'Done.';
+
+	@closeConn();
+
+
+?>

@@ -1,0 +1,155 @@
+<?php
+
+    include 'common.php';
+
+//    if ($_SERVER['SERVER_PORT'] != 443) { header('Location: ' . $serverPathS . $_SERVER['REQUEST_URI']); exit(); }
+
+    $dbLink = openConn();
+
+    $result = mysql_query('SELECT data FROM preferences WHERE dataKey = "currentRound" AND tourney = "' . $tourneyID . '";', $dbLink); $data = mysql_fetch_row($result); @mysql_free_result($result);
+    switch ($data[0])
+    {
+        case 0: { $theRound = 'Pre-Competition'; break; }
+        case 1: { $theRound = 'Final Round'; break; }
+        case 2: { $theRound = 'Semifinal Round'; break; }
+        case 3: { $theRound = 'Quarterfinal Round'; break; }
+        case 4: { $theRound = 'Final Round of Sixteen'; break; }
+        case 5: { $theRound = 'Final Round of Thirty-two'; break; }
+        case 6: { $theRound = 'Final Round of Sixty-four'; break; }
+        case -1: { $theRound = 'Preliminary Round I'; break; }
+        case -2: { $theRound = 'Preliminary Round II'; break; }
+        case -3: { $theRound = 'Preliminary Round III'; break; }
+        case -4: { $theRound = 'Preliminary Round IV'; break; }
+        case -5: { $theRound = 'Preliminary Round V'; break; }
+    }
+    $theRoundID = $data[0]; unset($data);
+
+    
+    if ($theRoundID != 0)
+    {
+        $matches = mysql_query('SELECT * FROM rounds WHERE round ="' . $theRoundID . '" AND tourney = "' . $tourneyID . '";', $dbLink);
+        
+        $result = mysql_query('SELECT team_ID, student_ID1, student_ID2 FROM teams WHERE tourney = "' . $tourneyID . '";', $dbLink);
+        for ($indx = 0; $indx < mysql_num_rows($result); $indx++)
+        {
+            @mysql_data_seek($result, $indx); $data = mysql_fetch_row($result);
+            $teams[$data[0]][0] = trim($data[1]); $teams[$data[0]][1] = trim($data[2]); unset($data);
+        }
+        @mysql_free_result($result);
+        
+        $result = mysql_query('SELECT student_ID, name FROM participants WHERE tourney = "' . $tourneyID . '";', $dbLink);
+        for ($indx = 0; $indx < mysql_num_rows($result); $indx++)
+        {
+            @mysql_data_seek($result, $indx); $data = mysql_fetch_row($result);
+            $people[$data[0]] = trim($data[1]); unset($data);
+        }
+        @mysql_free_result($result);
+        
+    }
+
+
+    @closeConn($dbLink);
+
+
+
+?>
+
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xml:lang="en-US" dir="ltr">
+
+<head dir="ltr">
+<meta http-equiv="content-type" content="text/html; charset=iso-8859-1;" />
+<title>ACMA - The University of Texas at Arlington</title>
+<meta name="Author" content="honors.uta.edu" />
+<meta name="Keywords" content="acma moot court mootcourt simulation court Supreme Court Simulation scholastic moot court court tournaments" />
+<meta name="Description" content="infomation about moot courts or mootcourts also known as mock supreme courts or simulation courts" />
+<meta name="distribution" content="global" />
+<meta name="resource-type" content="document" />
+<meta name="language" content="en" />
+
+<style type="text/css">
+
+<!--
+
+  .redcell { }
+  .redtext12 { font-family:arial,sans-serif;font-weight:bold;font-size:12px;color:rgb(100,0,0); }
+  .redtext14 { font-family:arial,sans-serif;font-weight:bold;font-size:14px;color:rgb(100,0,0); }
+  .redtext18 { font-family:arial,sans-serif;font-weight:bold;font-size:14px;color:rgb(100,0,0); }
+  .blktext12 { font-family:arial,sans-serif;font-weight:bold;font-size:12px;color:rgb(0,0,0); }
+  .blktext14 { font-family:arial,sans-serif;font-weight:bold;font-size:14px;color:rgb(0,0,0); }
+  .newLeftCol { text-align:right;width:206px; }
+  .newRightCol { text-align:left;width:634px; }
+  .scheduleLeftCol { text-align:right;width:206px; }
+  .scheduleRightCol { text-align:left;width:634px; }
+  .divT10L20 { margin-top:10px;margin-left:20px; }
+  .divL15T15 { margin-top:10px;margin-left:20px; }
+  .divL15T30 { margin-top:10px;margin-left:20px; }
+  .scheduleRight { text-align:right;margin-right:3px;margin-top:2px; }
+  .scheduleLeft  { text-align:left;margin-left:3px;margin-top:2px; }
+  body  { color: black; background-color:white; }
+  a { background-color:transparent;color:blue;text-decoration:none; }
+  a.visit { background-color:transparent;color:blue;text-decoration:none; }
+
+//-->
+
+</style>
+
+</head>
+
+
+
+<body>
+
+ 
+
+
+ <table border="0" width="840" cellpadding="0" cellspacing="0" style="margin-top:25px;">
+ <col width="6" /><col width="200" /><col width="217" /><col width="417" />
+ <tr>
+ <td width="840" style="width:840px;" colspan="4"><div style="text-align:center;"><span class="redtext18"><em><?php echo $theRound; ?></em></span></div></td>
+ </tr>
+ <tr>
+ <td width="840" height="1" style="height:1px;width:840px;background-color:rgb(100,0,0);" colspan="4"></td>
+ </tr>
+ <tr>
+ <td width="840" height="20" style="height:20px;width:840px;background-color:transparent;" colspan="4"></td>
+ </tr>
+ 
+ 
+ <tr>
+ <td width="840" style="width:840px;" colspan="4">
+ <div style="margin-left:8em;">
+    <table width="650" cellpadding="0" cellspacing="0" style="margin-top:10px;" border="0">
+    <col width="100" /><col width="100" /><col width="100" /><col width="50" /><col width="100" /><col width="100" /><col width="100" />
+<?php
+        $matchCount = mysql_num_rows($matches);
+        for ($indx = 0; $indx < $matchCount; $indx++)
+        {
+            @mysql_data_seek($matches, $indx++); $data = mysql_fetch_row($matches); @mysql_data_seek($matches, $indx); $data2 = mysql_fetch_row($matches);
+            if ($data[2] != -1)
+            {  echo '<tr><td><span class="blktext14">Team ' . sprintf('%03d', $data[1]) . '</span></td><td><span class="blktext14">Team ' . sprintf('%03d', $data[2]) . '</span></td></span></td><td><span class="blktext14">'; if ($data[4] == 0) { echo '<span style="color:red;background-color:transparent;">Pending</span>'; } else { echo '<span style="color:green;background-color:transparent;">Scored</span>'; } echo '</span></td><td></td>';  }
+            else
+            {  echo '<tr><td><span class="blktext14">Team ' . sprintf('%03d', $data[1]) . '</span></td><td></td><td></td><td><span class="blktext14">Bye</span></td><td></td>';  }
+
+            if ($data2[2] != -1)
+            {  echo '<td><span class="blktext14">Team ' . sprintf('%03d', $data2[1]) . '</span></td><td><span class="blktext14">Team ' . sprintf('%03d', $data2[2]) . '</span></td></span></td><td><span class="blktext14">'; if ($data2[4] == 0) { echo '<span style="color:red;background-color:transparent;">Pending</span>'; } else { echo '<span style="color:green;background-color:transparent;">Scored</span>'; } echo '</span></td></tr>' . chr(13);  }
+            else
+            {  echo '<td><span class="blktext14">Team ' . sprintf('%03d', $data2[1]) . '</span></td><td></td><td><span class="blktext14">Bye</span></td></tr>' . chr(13);  }
+            echo '<tr><td style="height:6px;" colspan="4"></td></tr>' . chr(13);
+
+
+        }
+?>        
+    </table>
+ </div></td></tr>
+
+
+
+
+
+   <tr>
+     <td width="840" height="20" style="height:20px;width:840px;background-color:transparent;" colspan="4"></td>
+   </tr>
+</table> 
+ 

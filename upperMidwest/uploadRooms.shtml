@@ -1,0 +1,142 @@
+<?php
+
+    include 'common.php';
+
+    if ($_SERVER['SERVER_PORT'] != 443) { header('Location: ' . $serverPathS . $_SERVER['REQUEST_URI']); exit(); }
+
+    $userCode = verifySignIn();
+    if (($userCode === false) || ($userCode < 2)) { header('Location: '. $fullPath); exit; }
+
+
+    $whom = false; $pass = false; $userCode = false; $flag = false;
+    if (isset($_COOKIE['acmaAdminUser']) && isset($_COOKIE['acmaAdminPass']))
+    {
+        $dbLink = openConn(); $userCode = checkCookies(); @closeConn($dbLink);
+    }
+    else
+    { header('Location: ' . $fullPath . '?1'); exit(); }
+    
+    if ($userCode < 2) { header('Location: ' . $fullPath . '?2'); exit(); }
+
+
+        if (isset($_POST['validated']))
+        {
+            if ( ($_POST['validated'] == 1) && (is_uploaded_file($_FILES['rooms']['tmp_name'])) )
+            {
+                $acceptableFormats = '*RICH TEXT*';
+                $suffix = ''; $badFile1 = false; $badFile2 = false;
+                for($indx = 0; $indx < 16; $indx++)
+                { $newName = str_replace(substr(' !?*#(){}[].,-/"', $indx, 1), '_', $newName); }    
+                $newName = str_replace(substr('\\', $indx, 1), '', $newName);
+                $newName = str_replace(substr('/', $indx, 1), '', $newName);
+
+                $lines = file($_FILES['rooms']['tmp_name']);
+                if (sizeof($lines) == 1) { echo 'Your data may be saved incorrectly. Rows should end with CR+LF.'; exit; }
+                $data = explode(chr(9), $lines[0]);
+                if (sizeof($data) != 16) { echo 'Your data appears to have the wrong number of columns.'; exit; }
+                
+                $dbLink = openConn();
+                @mysql_query('TRUNCATE TABLE rooms;', $dbLink); @mysql_query('TRUNCATE TABLE buildings;', $dbLink); @mysql_query('OPTIMIZE TABLES buildings, rooms;', $dbLink);
+                $holder = '*'; $bIndx = 0;
+                for ($indx = 0; $indx < sizeof($lines); $indx++)
+                {
+                    $data = explode(chr(9), $lines[$indx]);
+                    if (strpos($holder, $data[0]) == 0) { $bldgs[$bIndx][0] = $data[0]; $bldgs[$bIndx][1] = $data[1]; $bldgs[$bIndx++][2] = $data[2]; $holder .= trim($data[0]) . '*'; }
+                    unset($data);
+                }
+                for ($indx = 0; $indx < sizeof($bldgs); $indx++)
+                {
+                    $result = mysql_query('INSERT INTO buildings VALUES("' . $tourneyID . '", "", "' . $bldgs[$indx][0] . '", "' . $bldgs[$indx][1] . '", "' . $bldgs[$indx][2] . '");', $dbLink); @mysql_free_result($result);
+                }
+                unset($bldgs);
+                $result = mysql_query('SELECT id, abbr FROM buildings;', $dbLink);
+                for ($indx = 0; $indx < mysql_num_rows($result); $indx++)
+                { @mysql_data_seek($result, $indx); $data = mysql_fetch_row($result); $bldgs[$data[1]] = $data[0]; $bldgs2[$data[0]] = $data[1]; unset($data); } @mysql_free_result($result);
+
+                for ($indx = 0; $indx < sizeof($lines); $indx++)
+                {
+                    $data = explode(chr(9), $lines[$indx]);
+                    $job = 'INSERT INTO rooms VALUES("' . $tourneyID . '", "", "' . $bldgs[$data[1]] . '"';
+                    for ($indx2 = 3; $indx2 < 16; $indx2++) { $job .= ', "' . $data[$indx2] . '"'; }
+                    $job .= ');'; @mysql_query($job, $dbLink);
+                }
+                $update = mysql_query('SELECT * FROM rooms;', $dbLink); $flag = true;
+                @closeConn($dbLink);
+            }
+        }
+
+    include 'head_s.shtml';
+
+?>
+
+
+    <form enctype="multipart/form-data" action="<?php echo $serverPathS . $_SERVER['REQUEST_URI']; ?>" method="post"><input type="hidden" value="1" name="validated" id="validated" />
+ <table border="0" width="840" cellpadding="0" cellspacing="0" style="margin-top:25px;">
+ <col width="6" /><col width="200" /><col width="217" /><col width="417" />
+
+
+ <tr>
+ <td width="<?php echo $maxSize; ?>" style="width:<?php echo $maxSize; ?>px;" colspan="4"><div style="margin-bottom:1em;"><span class="blktext10"><a href="<?php echo $fullPath; ?>admin/">Back to the admin page</a></span></div></td>
+ </tr>
+
+
+   <tr>
+     <td width="6" style="width:6px;background-color:rgb(100,0,0);"></td>
+     <td width="834" style="width:834px;" colspan="3"><div style="margin-left:10px;"><span class="redtext14">Upload Room/Building Data</span></div></td>
+   </tr>
+   <tr>
+     <td width="840" height="1" style="height:1px;width:840px;background-color:rgb(100,0,0);" colspan="4"></td>
+   </tr>
+   <tr>
+      <td width="840" style="width:840px;background-color:transparent;height:3px;" colspan="4"></td>
+   </tr>
+   <tr>
+        <td></td>
+        <td colspan="3"><p class="pblktext12">For data to upload correctly, it should be formatted in columns in this exact order: building Name, building abbreviation, priority (1 = first, ... last), room number, Pre1, Pre2, Pre3, Pre4, Pre5, Rnd64, Rnd32, Rnd16, Rnd 8, Rnd4, Final, Bye. For the fields Pre1 - Final, place a one ( 1 ) if this room is available for this round and a zero ( 0 ) if it is not. This is used by the system when assigning rooms. The priority value will use the rooms in lower-numbered buildings before moving on to the next.</p><p class="pblktext12">Save this as a tab-delimited text file. Open the file in a MS Word and remove any blank lines at the end. The end of the file should be on the end of the last line. DO NOT add column headers. Select Save As..., choose <em>Plain Text</em> for the file format. Word will present several options. Select the <em>Insert Line Breaks</em> option and ensure that it is set to <em>CR+LF</em>.</span></td>
+   </tr>
+
+   <tr>
+        <td></td>
+        <td colspan="3"><div style="margin-top:1em;"><input type="file" name="rooms" id="rooms" /><input style="margin-left:1em;" type="submit" name="save" id="save" value="Upload" /></div></td>
+   </tr>
+
+<?php
+
+        if ($flag)
+        {
+            echo '   <tr>';
+            echo '      <td width="840" style="width:840px;background-color:transparent;" colspan="4"><div style="margin-top:.75em;"></div></td>';
+            echo '   </tr>';
+            echo '   <tr>';
+            echo '     <td width="840" height="1" style="height:1px;width:840px;background-color:rgb(100,0,0);" colspan="4"></td>';
+            echo '   </tr>';
+            echo '   <tr>';
+            echo '      <td width="840" style="width:840px;background-color:transparent;" colspan="4"><div style="margin-top:.75em;"></div></td>';
+            echo '   </tr>'; $a = '&nbsp;&nbsp;';
+
+            for ($indx = 0; $indx < mysql_num_rows($update); $indx++)
+            {
+                @mysql_data_seek($update, $indx); $data = mysql_fetch_assoc($update);
+                echo '<tr><td colspan="4">';
+                echo '#' . sprintf('%02d', intval($indx + 1)) . ':' . $a . $bldgs2[$data['building_ID']] . ' ' . $data['roomNumber'] . ':' . $a . 'P1:' . $data['pre1'] . $a . 'P2:' . $data['pre2'];
+                echo $a . 'P3:' . $data['pre3'] . $a . 'P4:' . $data['pre4'] . $a . 'P5:' . $data['pre5'];
+                echo $a . '64:' . $data['rnd64'] . $a . '32:' . $data['rnd32'] . $a . '16:' . $data['sixteen'] . $a . 'Q:' . $data['quarter'] . $a . 'S:' . $data['semi'] . $a . 'F:' . $data['final'] . $a . 'Bye:' . $data['bye'] . '</td></tr>';
+                unset($data);
+            }
+            @mysql_free_result($update);
+        }
+
+
+?>
+
+
+
+ <tr>
+    <td width="840" style="width:840px;background-color:transparent;height:2em;" colspan="4"></td>
+ </tr>
+
+
+ </table>
+    </form>
+
+<?php include 'foot.shtml'; ?>

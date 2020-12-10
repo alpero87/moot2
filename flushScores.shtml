@@ -1,0 +1,122 @@
+<?php
+
+    include 'common.php';
+
+//    if ($_SERVER['SERVER_PORT'] != 443) { header('Location: ' . $serverPathS . $_SERVER['REQUEST_URI']); exit(); }
+
+    $userCode = verifySignIn();
+    if (($userCode === false) || ($userCode < 2)) { header('Location: '. $fullPath); exit; }
+
+    $dbLink = openConn();
+    $taskDone = false;
+    if (isset($_POST['verified']))
+    {
+        if ($_POST['verified'] == '953')
+        {
+            if ($_POST['job'] == 'Continue')
+            {
+            	$task = strtoupper($_POST['task']);
+            	switch ($task)
+            	{
+            		case 'FLUSH':
+            		{
+		                //  FLUSH THE DATA
+//		                echo 'flush'; exit;
+		                @mysql_query('UPDATE teams SET win="0", tie="0", loss="0", prelimBallots="0", pre1="0", pd1="0", pre2="0", pd2="0", pre3="0", pd3="0" WHERE tourney = "' . $tourneyID . '";', $dbLink);
+        		        @mysql_query('DELETE FROM scores WHERE tourney = "' . $tourneyID . '";', $dbLink);
+						$taskDone = 'The scores data has been deleted.';
+        		        break;
+            		}
+            		case 'PURGE':
+            		{
+//            			echo 'purge'; exit;
+						@mysql_query('DELETE FROM participants WHERE tourney = "' . $tourneyID . '";', $dbLink);
+						@mysql_query('DELETE FROM rounds WHERE tourney = "' . $tourneyID . '";', $dbLink);
+						@mysql_query('DELETE FROM scores WHERE tourney = "' . $tourneyID . '";', $dbLink);
+						@mysql_query('DELETE FROM teams WHERE tourney = "' . $tourneyID . '";', $dbLink);
+						@mysql_query('DELETE FROM registration WHERE tourney = "' . $tourneyID . '";', $dbLink);
+                        @mysql_query('DELETE FROM matchups WHERE tourney = "' . $tourneyID . '";', $dbLink);
+						$taskDone = 'The active tournament data has been purged.';
+						break;
+            		}
+            		case 'ARCHIVE':
+            		{
+//            			echo 'archive'; exit;
+						@mysql_query('DELETE FROM participants_bu WHERE tourney = "' . $tourneyID . '";', $dbLink);
+						@mysql_query('DELETE FROM rounds_bu WHERE tourney = "' . $tourneyID . '";', $dbLink);
+						@mysql_query('DELETE FROM scores_bu WHERE tourney = "' . $tourneyID . '";', $dbLink);
+						@mysql_query('DELETE FROM teams_bu WHERE tourney = "' . $tourneyID . '";', $dbLink);
+						@mysql_query('DELETE FROM registration_bu WHERE tourney = "' . $tourneyID . '";', $dbLink);
+
+						@mysql_query('INSERT INTO participants_bu (SELECT * FROM participants WHERE tourney = "' . $tourneyID . '");', $dbLink);
+						@mysql_query('INSERT INTO scores_bu (SELECT * FROM scores WHERE tourney = "' . $tourneyID . '");', $dbLink);
+						@mysql_query('INSERT INTO teams_bu (SELECT * FROM teams WHERE tourney = "' . $tourneyID . '");', $dbLink);
+						@mysql_query('INSERT INTO rounds_bu (SELECT * FROM rounds WHERE tourney = "' . $tourneyID . '");', $dbLink);
+						@mysql_query('INSERT INTO registration_bu (SELECT * FROM registration WHERE tourney = "' . $tourneyID . '");', $dbLink);
+						$taskDone = 'The data has been moved to the archive.';
+						break;
+            		}
+            	}
+	            @mysql_query('OPTIMIZE TABLES scores;', $dbLink);
+            }
+            header('Location: '. $fullPathSA); exit;
+        }
+    }
+
+
+        @closeConn($dbLink);
+
+
+
+
+    include 'head_s.shtml';
+
+?>
+
+ <table border="0" width="800" cellpadding="0" cellspacing="0" style="margin-top:.5em;">
+ <col width="100" /><col width="100" /><col width="200" /><col width="400" />
+ <tr>
+ <td width="800" style="width:800px;" colspan="4"><div style="margin-bottom:1em;"><span class="blktext10"><a href="<?php echo $fullPathSA; ?>">Back to the admin page</a></span></div></td>
+ </tr>
+
+ <tr>
+ <td width="800" style="width:800px;" colspan="4"><div style="text-align:center;"><span class="redtext18"><em>Database Operations</em></span></div></td>
+ </tr>
+ <tr>
+ <td width="800" height="1" style="height:1px;width:800px;background-color:rgb(100,0,0);" colspan="4"></td>
+ </tr>
+ <tr>
+ <td width="800" height="20" style="height:20px;width:800px;background-color:transparent;" colspan="4"></td>
+ </tr>
+
+
+
+
+ <tr>
+    <td width="800" height="20" style="width:800px;text-align:cetner;" colspan="4">
+        <form action="<?php echo $fullPathSA; ?>flushScores.shtml" method="post"><input type="hidden" name="verified" value="953" id="verified" />
+<?php
+
+		if ($taskDone !== false)
+		{
+			echo '        <p class="blktext12">Notice: ' . $taskDone . '<br />';
+		}
+
+?>        <p class="blktext12">Option:<br />
+        	<input style="margin-left:3em;" value="flush" type="radio" id="task" name="task" /> Flush only the scores (reenter all the scores)<br />
+        	<input style="margin-left:3em;" value="purge" type="radio" id="task" name="task" /> Purge tournament (deletes all participants, teams, scores, et c.)<br />
+        	<input style="margin-left:3em;" value="archive" type="radio" id="task" name="task" /> Send tournament data to the archive<br />
+        </p>
+        <p class="blktext12">THESE CANNOT BE UNDONE.</p>
+        <p class="pblktext12"><input name="job" type="submit" value="Continue" /><input type="submit" name="job" value="Cancel" style="margin-left:5em;" />
+        </form>
+    </td>
+ </tr>
+
+
+
+ </table>
+
+
+<?php include 'foot.shtml'; ?>
+

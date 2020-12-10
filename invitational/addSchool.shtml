@@ -1,0 +1,196 @@
+<?php
+
+      
+    include 'common.php';
+
+        
+        $mode = 0;
+        if (isset($_POST['mode'])) { $mode = trim($_POST['mode']); }
+        if (isset($_GET['mode'])) { $mode = trim($_GET['mode']); }
+
+
+
+//    if ($_SERVER['SERVER_PORT'] != 443) { header('Location: ' . $serverPathS . $_SERVER['REQUEST_URI']); exit(); }
+
+    $userCode = verifySignIn();
+    if (($userCode === false) || ($userCode < 2)) { header('Location: '. $fullPath); exit; } 
+
+    $dbLink = openConn();
+
+//    $tourneyID = 2;
+
+    if (isset($_POST['selector']))
+    {
+
+
+        if ($mode == 2 && ($_POST['action'] == 'Save'))     //  Save entry
+        {
+            $indx = ''; $updated = ''; $updateFlag = false; if ($_POST['target'] > 0) { $indx = $_POST['target']; $updateFlag = true; }
+            if ($updateFlag)
+            {
+                $target = $_POST['target'];
+                @mysql_query('DELETE FROM registration WHERE tourney = "' . $tourneyID . '" AND id = "' . $target . '";', $dbLink);
+                @mysql_query('DELETE FROM teams WHERE tourney = "' . $tourneyID . '" AND school_ID = "' . $target . '";', $dbLink);
+                @mysql_query('DELETE FROM participants WHERE tourney = "' . $tourneyID . '" AND school_ID = "' . $target . '";', $dbLink);
+            }
+
+            @mysql_query('INSERT INTO registration (school, tourney) VALUES("' . $_POST['schoolName'] . '", "' . $tourneyID . '");', $dbLink);
+            $result = mysql_query('SELECT id FROM registration WHERE school = "' . $_POST['schoolName'] . '" AND tourney = "' . $tourneyID . '";', $dbLink);
+            $data = mysql_fetch_row($result); $sID = $data[0]; unset($data); @mysql_free_result($result);
+
+            for ($indx = 0; $indx < 15; $indx++)
+            {
+                $tID = 0; $pID1 = 0; $pID2 = 0; $pName1 = ''; $pName2 = '';
+                if (isset($_POST['team' . $indx])) {  $tID = $_POST['team' . $indx]; }
+                if (isset($_POST['t' . $indx . 'p0'])) {  $pName1 = $_POST['t' . $indx . 'p0']; }
+                if (isset($_POST['t' . $indx . 'p1'])) {  $pName2 = $_POST['t' . $indx . 'p1']; }
+                if ($tID != 0 && strlen($pName1) != 0 && strlen($pName2) != 0)
+                {
+                    @mysql_query('INSERT INTO participants (school_ID, name, tourney) VALUES("' . $sID . '", "' . $pName1 . '", "' . $tourneyID . '"), ("' . $sID . '", "' . $pName2 . '", "' . $tourneyID . '");', $dbLink);
+//                    echo '[ INSERT INTO participants (school_ID, name, tourney) VALUES("' . $sID . '", "' . $pName1 . '", "' . $tourneyID . '"), ("' . $sID . '", "' . $pName2 . '", "' . $tourneyID . '"); ]<br />';
+                    $result = mysql_query('SELECT student_ID FROM participants WHERE school_ID = "' . $sID . '" AND (name = "' . $pName1 . '" OR name = "' . $pName2 . '") AND tourney = "' . $tourneyID . '" ORDER BY student_ID;', $dbLink);
+                    @mysql_data_seek($result, 0); $data = mysql_fetch_row($result); $t0 = $data[0]; unset($data);
+                    @mysql_data_seek($result, 1); $data = mysql_fetch_row($result); $t1 = $data[0]; unset($data); @mysql_free_result($result);
+                    @mysql_query('INSERT INTO teams (team_ID, school_ID, student_ID1, student_ID2, tourney, present) VALUES("' . $tID . '", "' . $sID . '", "' . $t0 . '", "' . $t1 . '", "' . $tourneyID . '", "1");', $dbLink);
+//                    echo '[ INSERT INTO teams (team_ID, school_ID, student_ID1, student_ID2, tourney, present) VALUES("' . $tID . '", "' . $sID . '", "' . $t0 . '", "' . $t1 . '", "' . $tourneyID . '", "0"); ]<br />';
+                }
+//                echo '<br />';
+            }
+
+            $mode = 0;
+            @mysql_free_result($result);
+            
+        }
+
+        if ($mode == 2 && ($_POST['action'] == 'Delete'))     //  Delete entry
+        {
+            $target = $_POST['target'];
+            @mysql_query('DELETE FROM registration WHERE tourney = "' . $tourneyID . '" AND id = "' . $target . '";', $dbLink);
+            @mysql_query('DELETE FROM teams WHERE tourney = "' . $tourneyID . '" AND school_ID = "' . $target . '";', $dbLink);
+            @mysql_query('DELETE FROM participants WHERE tourney = "' . $tourneyID . '" AND school_ID = "' . $target . '";', $dbLink);
+            $mode = 0;
+        }
+
+    }
+
+        if ($_POST['action'] == 'Cancel') { $mode = 0; }
+        
+        $schoolList = mysql_query('SELECT id, school FROM registration WHERE tourney = "' . $tourneyID . '" ORDER BY school;', $dbLink);
+        
+        @closeConn($dbLink);
+
+
+
+ include 'head_s.shtml'; 
+
+        if ($mode == 0)     //  Main menu: list old entries, create a new one        {?>
+    <div style="margin-bottom:1em;margin-top:2em;"><span class="blktext10"><a href="<?php echo $fullPathSA; ?>">Back to the admin page</a></span></div>
+    <div style="margin-left:15px;margin-top:20px;">
+        <form name="selectSchool" id="selectSchool" method="post" action="<?php echo $serverPathS . $_SERVER['REQUEST_URI']; ?>"><input type="hidden" name="mode" id="mode" value="1" />        <table cellspacing="0" cellpadding="0" width="590"><col width="200" /><col width="390" />         <tr><td colspan="2"><div style="text-align:center;"><span class="blktext18" style="color:rgb(0,0,152);">Add/Edit Schools</span></div></td></tr>         <tr><td colspan="2" style="height:5px;background-color:transparent"><img src="images/white_dot.gif" height="1" width="1" alt="" /></td></tr>         <tr><td colspan="2" style="height:5px;background-color:rgb(192,192,255)"><img src="images/white_dot.gif" height="1" width="1" alt="" /></td></tr>         <tr><td colspan="2" style="height:15px;background-color:transparent"><img src="images/white_dot.gif" height="1" width="1" alt="" /></td></tr>
+         <tr><td colspan="2"><span class="blktext12">Schools: <select name="entries" id="entries"><option value="-1">Add a new school</option><?php
+
+            if (mysql_num_rows($schoolList) > 0)
+            {
+                echo '';
+                for ($indx = 0; $indx < mysql_num_rows($schoolList); $indx++)
+                {
+                    @mysql_data_seek($schoolList, $indx); $entry = mysql_fetch_assoc($schoolList); $theEntry = $entry['school'];
+                    echo '<option value="' . $entry['id'] . '">' . $theEntry . '</option>'; unset($entry);
+                }
+            }
+
+            @mysql_free_result($schoolList);
+
+?></select><input type="submit" name="choose" id="choose" value="Select" style="margin-left:2em;" /></span></td></tr>
+        </table>
+        </form>     </div>
+<?php        }        
+        
+        if ($mode == 1)         //  Create a new entry        {
+            $dbLink = openConn();
+            if (isset($_POST['entries'])) { $theEntry = $_POST['entries']; }
+            if (isset($_GET['entries'])) { $theEntry = $_GET['entries']; }
+            if ($theEntry > 0)
+            {
+                $sResult = mysql_query('SELECT id, school FROM registration WHERE id = "' . $theEntry . '" AND tourney = "' . $tourneyID . '";', $dbLink); $schoolData = mysql_fetch_assoc($sResult); @mysql_free_result($sResult);
+                $pResult = mysql_query('SELECT name, student_ID FROM participants WHERE school_ID = "' . $theEntry . '" AND tourney = "' . $tourneyID . '";', $dbLink);
+                for ($indx = 0; $indx < mysql_num_rows($pResult); $indx++)
+                { @mysql_data_seek($pResult, $indx); $data = mysql_fetch_assoc($pResult); $participants[$data['student_ID']] = $data['name']; unset($data); } @mysql_free_result($pResult);
+                $tResult = mysql_query('SELECT team_ID, student_ID1, student_ID2 FROM teams WHERE school_ID = "' . $theEntry . '" AND tourney = "' . $tourneyID . '" ORDER BY team_ID;', $dbLink); $teamCount = mysql_num_rows($tResult);
+                for ($indx = 0; $indx < mysql_num_rows($tResult); $indx++)
+                { @mysql_data_seek($tResult, $indx); $data = mysql_fetch_assoc($tResult); $teams[$data['team_ID']][0] = $data['student_ID1']; $teams[$data['team_ID']][1] = $data['student_ID2']; unset($data); } @mysql_free_result($tResult);
+            }
+            else
+            { $schoolData = array('id' => '','school' => ''); $participants[0] = ''; $teams[0][0] = 0; $teams[0][1] = 0; $teamCount = 0; $endAt = 0; }
+            @closeConn($dbLink);
+
+?>  
+
+<form name="register" id="register" method="post" action="<?php echo $serverPathS . $_SERVER['REQUEST_URI']; ?>"><input type="hidden" name="selector" id="selector" value="new" /><input type="hidden" name="target" id="target" value="<?php echo $theEntry; ?>" /><input type="hidden" name="mode" id="mode" value="2" />
+ <table border="0" width="840" cellpadding="0" cellspacing="0" style="margin-top:25px;">
+ <col width="6" /><col width="200" /><col width="217" /><col width="417" />
+ <tr><td width="4" style="width:840px;" colspan="4"><div style="margin-bottom:1em;margin-top:2em;"><span class="blktext10"><a href="<?php echo $fullPathSA; ?>">Back to the admin page</a></span></div></td></tr>
+ <tr>
+   <td width="6" style="width:6px;background-color:rgb(100,0,0);"></td>
+   <td width="834" style="width:834px;" colspan="3"><div style="margin-left:10px;"><span class="redtext14">School Information</span></div></td>
+ </tr>
+ <tr>
+   <td width="840" height="1" style="height:1px;width:840px;background-color:rgb(100,0,0);" colspan="4"></td>
+ </tr>
+ <tr>
+   <td width="840" height="20" style="height:20px;width:840px;background-color:white;" colspan="4"></td>
+ </tr>
+
+ <tr>
+  <td class="newLeftCol" colspan="2"><span class="blktext12">School Name:&nbsp;</span></td>
+  <td class="newRightCol" colspan="2"><input type="text" maxlength="50" size="40" id="schoolName" name="schoolName" value="<?php echo trim($schoolData['school']);  ?>" /></td>
+ </tr>
+
+ <tr><td colspan="4" class="pblktext12" style="text-align:center;"><div style="margin-top:1.5em;margin-bottom:.5em;">Please enter complete teams only. Incomplete teams will be ignored.</div></td></tr>
+
+<?php
+
+        if ($teamCount > 0)
+        {
+            $indx = 0;
+            foreach($teams as $teamID => $teamData)
+            {
+                echo '<tr><td colspan="3" style="text-align:right;" class="pblktext12">Team #<input name="team' . $indx . '" maxlength="4" size="4" style="margin-right:1.5em;margin-bottom:.2em;" value="' . $teamID . '" />';
+                echo '<input name="t' . $indx . 'p0" maxlength="50" size="30" style="margin-right:.5em;margin-bottom:.2em;" value="' . $participants[$teamData[0]] . '" />';
+                echo '<td colspan="1" style="text-align:left;"><input name="t' . $indx . 'p1" maxlength="50" size="30" style="margin-left:.5em;margin-bottom:.2em;" value="' . $participants[$teamData[1]] . '" /></tr>';
+                $indx += 1;
+            }
+            $endAt = $indx;
+        }
+
+        for ($indx = $endAt; $indx < 15 - $teamsCount; $indx++)
+        {
+            echo '<tr><td colspan="3" style="text-align:right;" class="pblktext12">Team #<input name="team' . $indx . '" maxlength="4" size="4" style="margin-right:1.5em;margin-bottom:.2em;" />';
+            echo '<input name="t' . $indx . 'p0" maxlength="50" size="30" style="margin-right:.5em;margin-bottom:.2em;" />';
+            echo '<td colspan="1" style="text-align:left;"><input name="t' . $indx . 'p1" maxlength="50" size="30" style="margin-left:.5em;margin-bottom:.2em;" /></tr>';
+        }
+
+?>
+
+
+
+
+<tr><td colspan="2" style="width:206px;" width="206"></td><td colspan="2" style="width:634px;" width="634">
+<div style="width:634px;">
+<input type="submit" style="margin-top:20px;" name="action" id="action" value="Save" /><input type="submit" name="action" id="action".0 style="margin-left:50px;margin-top:20px;" value="Delete" /><input type="reset" style="margin-left:50px;margin-top:20px;" value="Reset information" />
+</div>
+</td></tr>
+<tr><td colspan="4">
+<div style="margin-top:20px;text-align:center;">
+     <span class="blktext12"><a href="<?php if (false || ($_COOKIE['acmaJSon'] == '1')) { echo 'javascript:history.go(-1);'; } else { echo 'http://honors.uta.edu/mootcourt/'; } ?>">Cancel and return to the previous page</a></span>
+</div>
+</td></tr></table>
+
+</form>
+
+
+<?php
+
+    }
+
+  unset($data); include 'foot.shtml'; ?>

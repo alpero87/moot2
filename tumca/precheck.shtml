@@ -1,0 +1,98 @@
+<?php
+
+    include 'common.php';
+
+//    if ($_SERVER['SERVER_PORT'] != 443) { header('Location: ' . $serverPathS . $_SERVER['REQUEST_URI']); exit(); }
+
+    $userCode = verifySignIn();
+    if (($userCode === false) || ($userCode < 2)) { header('Location: '. $fullPath); exit; }
+
+    $dbLink = openConn();
+    $result = mysql_query('SELECT data FROM preferences WHERE dataKey = "prelimRounds";', $dbLink); $data = mysql_fetch_row($result); $prelimCount = $data[0]; @mysql_free_result($result); unset($data);
+    $result = mysql_query('SELECT data FROM preferences WHERE dataKey = "finalRounds";', $dbLink); $data = mysql_fetch_row($result); $finalCount = $data[0]; @mysql_free_result($result); unset($data);
+    $result = mysql_query('SELECT data FROM preferences WHERE dataKey = "currentRound";', $dbLink); $data = mysql_fetch_row($result); $currentRound = $data[0]; @mysql_free_result($result); unset($data);
+
+
+        function SheetCount($round)
+        {
+            global $dbLink;
+            $result = mysql_query('SELECT team1, team2 FROM rounds WHERE round = "' . $round . '"', $dbLink);
+    
+            for ($indx = 0; $indx < mysql_num_rows($result); $indx++)
+            {
+                @mysql_data_seek($result, $indx); $data = mysql_fetch_row($result);
+                $result2 = mysql_query('SELECT team_ID, COUNT(*) as sheets FROM scores WHERE round = "' . $round . '" and (team_ID = "' . $data[0] . '" OR team_ID = "' . $data[1] . '") GROUP BY team_ID;', $dbLink);
+                $answer1 = mysql_fetch_row($result2); @mysql_data_seek($result2, 1); $answer2 = mysql_fetch_row($result2); @mysql_free_result($result2); unset($data);
+                echo $answer1[0] . ' vs ' . $answer2[0] . ': ';
+                if ($answer1[1] != $answer2[1]) { echo 'Problem'; } else { echo 'Good (' . $answer1[1] . '-' . $answer2[1] . ')'; } unset($answer1); unset($answer2);
+                echo '<br />';
+            }
+        }
+
+
+
+
+    $bottomEnd = -intval($prelimRounds + 1);
+    for ($indx = -1; $indx > $bottomEnd; $indx--)
+    {   echo '<p>round ' . abs($indx) . '<br />'; @SheetCount($indx); echo '</p>';  }
+
+
+
+
+    echo '<p>Sheets with blank scores<br />'; $flag = false;
+    $result = mysql_query('SELECT s.*, p.name FROM scores AS s, participants AS p WHERE (s.knowledge = 0 OR s.response = 0 OR s.demeanor = 0 OR s.forensics = 0) AND p.student_ID = s.student_ID;', $dbLink);
+    if (mysql_num_rows($result) > 0)
+    {
+        $flag = true;
+        for ($indx = 0; $indx < mysql_num_rows($result); $indx++)
+        {
+            @mysql_data_seek($result, $indx); $data = mysql_fetch_assoc($result);
+            echo 'Round: ' . abs($data['round']) . ', team: ' . $data['team_ID'] . ' - ' . $data['name'] . '<br />'; unset($data);
+        }
+    }
+    if (!$flag) { echo 'None<br />'; }
+    @mysql_free_result($result);
+
+
+
+
+
+    echo '<p>Sheets with scores greater than 100<br />'; $flag = false;
+    $result = mysql_query('SELECT s.*, p.name FROM scores AS s, participants AS p WHERE (s.knowledge > 100 OR s.response > 100 OR s.demeanor > 100 OR s.forensics > 100) AND p.student_ID = s.student_ID;', $dbLink);
+    if (mysql_num_rows($result) > 0)
+    {
+        $flag = true;
+        for ($indx = 0; $indx < mysql_num_rows($result); $indx++)
+        {
+            @mysql_data_seek($result, $indx); $data = mysql_fetch_assoc($result);
+            echo 'Round: ' . abs($data['round']) . ', team: ' . $data['team_ID'] . ' - ' . $data['name'] . '<br />'; unset($data);
+        }
+    }
+    if (!$flag) { echo 'None<br />'; }
+    @mysql_free_result($result);
+
+
+
+
+    $prelimCount = 3; echo '<p>Teams with extra wins-losses-ties<br />'; $flag = false;
+    $result = mysql_query('SELECT * FROM teams WHERE win + loss + tie != "' . $prelimCount . '";', $dbLink);
+    if (mysql_num_rows($result) > 0)
+    {
+        $flag = true;
+        for ($indx = 0; $indx < mysql_num_rows($result); $indx++)
+        {
+            @mysql_data_seek($result, $indx); $data = mysql_fetch_assoc($result);
+            echo 'Team: ' . $data['team_ID'] . '<br />'; unset($data);
+        }
+    }
+    if (!$flag) { echo 'None<br />'; }
+    @mysql_free_result($result);
+    
+
+
+
+    @closeConn($dbLink);
+    
+    
+    
+?>

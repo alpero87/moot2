@@ -1,0 +1,88 @@
+<?php
+
+    include 'common.php';
+
+    $whom = false; $pass = false; $userCode = false;    
+    $userCode = verifySignIn();
+    if (($userCode === false) || ($userCode < 1)) { header('Location: '. $fullPath); exit; }
+
+    include 'head_s.shtml';
+
+
+    $dbLink = openConn();
+        $result = mysql_query('SELECT data FROM preferences WHERE tourney = "' . $tourneyID . '" AND dataKey = "prelimRounds";', $dbLink);
+        $data = mysql_fetch_row($result); $prelimCount = $data[0]; unset($data); @mysql_free_result($result);
+        $maxSize = intval($prelimCount * 150 + 150); $maxWide = intval($prelimCount + 1);
+ ?>
+
+
+ <table border="0" width="<?php echo $maxSize; ?>" cellspacing="1em" style="margin-top:.5em;">
+ <col width="150" /><?php
+ 
+        for ($indx = 1; $indx <= $prelimCount; $indx++)
+        { echo '<col width="150" />'; }
+ 
+ ?>
+
+ <tr>
+ <td width="<?php echo $maxSize; ?>" style="width:<?php echo $maxSize; ?>px;" colspan="<?php echo $maxWide; ?>"><div style="margin-bottom:1em;"><span class="blktext10"><a href="<?php echo $fullPathSA; ?>">Back to the admin page</a></span></div></td>
+ </tr>
+ <tr>
+ <td width="<?php echo $maxSize; ?>" style="width:<?php echo $maxSize; ?>px;" colspan="<?php echo $maxWide; ?>"><div style="text-align:center;"><span class="redtext18"><em>Team Competition Assignments</em></span></div></td>
+ </tr>
+ <tr>
+ <td width="<?php echo $maxSize; ?>" height="1" style="height:1px;width:<?php echo $maxSize; ?>px;background-color:rgb(100,0,0);" colspan="<?php echo $maxWide; ?>"></td>
+ </tr>
+ <tr>
+ <td width="<?php echo $maxSize; ?>" height="20" style="height:20px;width:<?php echo $maxSize; ?>px;background-color:transparent;" colspan="<?php echo $maxWide; ?>"></td>
+ </tr>
+ <tr>
+ <td width="150" style="width:150px;"><div style="text-align:center;"><span class="redtext12">Team ID</span></div></td>
+ <?php
+ 
+        for ($indx = 1; $indx <= $prelimCount; $indx++)
+        { echo '<td width="150" style="width:150px;"><div style="text-align:center;"><span class="redtext12">Prelim Round ' . $indx . '</span></div></td>' . chr(13); }
+ 
+ ?>
+ </tr>
+ <tr>
+ <td width="<?php echo $maxSize; ?>" height="1" style="height:1px;width:<?php echo $maxSize; ?>px;background-color:rgb(100,0,0);" colspan="<?php echo $maxWide; ?>"></td>
+ </tr>
+ 
+
+<?php
+
+
+    $rTeams = mysql_query('SELECT teams.team_ID, teams.school_ID FROM teams WHERE (teams.tourney="' . $tourneyID . '" AND teams.present="1") ORDER BY team_ID;', $dbLink);
+    for ($indx = 0; $indx < mysql_num_rows($rTeams); $indx++)
+    { @mysql_data_seek($rTeams, $indx); $data = mysql_fetch_row($rTeams); $teams[$data[0]][0] = $data[0]; $teams[$data[0]][1] = $data[1]; unset($data); }
+    $result = mysql_query('SELECT rooms.id, rooms.roomNumber, buildings.abbr FROM rooms, buildings WHERE rooms.tourney="' . $tourneyID . '" AND buildings.id = rooms.building_ID ORDER BY rooms.id;', $dbLink);
+    for ($indx = 0; $indx < mysql_num_rows($result); $indx++)
+    { @mysql_data_seek($result, $indx); $data = mysql_fetch_row($result); $rooms[$data[0]][0] = $data[1]; $rooms[$data[0]][1] = $data[2]; unset($data); }
+    @mysql_free_result($result);
+    
+
+    for($indx = 0; $indx < mysql_num_rows($rTeams); $indx++)
+    {
+            @mysql_data_seek($rTeams, $indx); $data = mysql_fetch_row($rTeams);
+            $result = mysql_query('SELECT round, team1, team2, location FROM rounds WHERE tourney = "' . $tourneyID . '" AND (team1 = "' . $data[0] . '" OR team2 = "' . $data[0] . '") ORDER BY round DESC;', $dbLink);
+            if (($indx % 2) == 0) { $color = ' style="background-color:rgb(225,225,225);"'; } else { $color = ''; }
+            echo '<tr' .  $color . '><td style="cell-padding:.2em;text-align:center;"><p class="blktext12">' . sprintf('%02d', $teams[$data[0]][0]) . ' - ' . sprintf('%02d', $teams[$data[0]][1]) . '</p></td>';
+            for ($indx2 = 0; $indx2 < $prelimCount; $indx2++)
+            {
+                @mysql_data_seek($result, $indx2); $round = mysql_fetch_assoc($result); $opponent = ($data[0] == $round['team1']) ? $round['team2'] : $round['team1'] ;
+                echo '<td style="text-align:center;"><p class="blktext12">' . sprintf('%02d', $teams[$opponent][0]) . ' - ' . sprintf('%02d', $teams[$opponent][1]) . ' - ' . sprintf('%02d', $round['location']) . '</p></td>';
+                unset($round);
+            }
+            echo '</tr>' . chr(13); @mysql_free_result($result);
+    }
+    @mysql_free_result($result);
+    
+    @closeConn($dbLink);
+?>
+
+   <tr>
+     <td width="800" height="20" style="height:20px;width:800px;background-color:transparent;" colspan="8"></td>
+   </tr>
+</table> 
+ </body></html>

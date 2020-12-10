@@ -1,0 +1,157 @@
+<?php
+
+
+    include 'common.php';
+
+    if ($_SERVER['SERVER_PORT'] != 443) { header('Location: ' . $serverPathS . $_SERVER['REQUEST_URI']); exit(); }
+    $userCode = verifySignIn();
+    if (($userCode === false) || ($userCode < 2)) { header('Location: '. $fullPath); exit; }
+    
+    $dbLink = openConn();
+
+    
+    $locations = mysql_query('SELECT location FROM rounds WHERE tourney = "' . $tourneyID . '" AND location > "0" GROUP BY location ORDER BY location;', $dbLink);
+
+    $result = mysql_query('SELECT COUNT(*) FROM rounds WHERE tourney = "' . $tourneyID . '" AND location = "-1";', $dbLink);
+    if (mysql_num_rows($result) > 0) { $data = mysql_fetch_row($result); $byeRoundFlag = (($data[0] > 0) || false); unset($data); } else { $byeRoundFlag = false; }
+    @mysql_free_result($result);
+
+?><?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xml:lang="en-US" dir="ltr">
+
+<head dir="ltr">
+<meta http-equiv="content-type" content="text/html; charset=iso-8859-1;" />
+<title>ACMA - The University of Texas at Arlington</title>
+<meta name="Author" content="honors.uta.edu" />
+<meta name="Keywords" content="acma moot court mootcourt simulation court Supreme Court Simulation scholastic moot court court tournaments" />
+<meta name="Description" content="infomation about moot courts or mootcourts also known as mock supreme courts or simulation courts" />
+<meta name="distribution" content="global" />
+<meta name="resource-type" content="document" />
+<meta name="language" content="en" />
+
+<style type="text/css">
+
+<!--
+
+  .redcell { }
+  .redtext12 { font-family:arial,sans-serif;font-weight:bold;font-size:12px;color:rgb(100,0,0); }
+  .redtext14 { font-family:arial,sans-serif;font-weight:bold;font-size:14px;color:rgb(100,0,0); }
+  .redtext18 { font-family:arial,sans-serif;font-weight:bold;font-size:14px;color:rgb(100,0,0); }
+  .pblktext10 { font-family:arial,sans-serif;font-weight:normal;font-size:10px;color:rgb(0,0,0); }
+  .blktext10 { font-family:arial,sans-serif;font-weight:bold;font-size:10px;color:rgb(0,0,0); }
+  .blktext12 { font-family:arial,sans-serif;font-weight:bold;font-size:12px;color:rgb(0,0,0); }
+  .blktext14 { font-family:arial,sans-serif;font-weight:bold;font-size:14px;color:rgb(0,0,0); }
+  .newLeftCol { text-align:right;width:206px; }
+  .newRightCol { text-align:left;width:634px; }
+  .scheduleLeftCol { text-align:right;width:206px; }
+  .scheduleRightCol { text-align:left;width:634px; }
+  .divT10L20 { margin-top:10px;margin-left:20px; }
+  .divL15T15 { margin-top:10px;margin-left:20px; }
+  .divL15T30 { margin-top:10px;margin-left:20px; }
+  .scheduleRight { text-align:right;margin-right:3px;margin-top:2px; }
+  .scheduleLeft  { text-align:left;margin-left:3px;margin-top:2px; }
+  body  { color: black; background-color:white; }
+  a { background-color:transparent;color:blue;text-decoration:none; }
+  a.visit { background-color:transparent;color:blue;text-decoration:none; }
+
+//-->
+
+</style>
+
+</head>
+
+
+
+<body>
+
+
+
+<?php
+        
+        
+        $result = mysql_query('SELECT data FROM preferences WHERE tourney = "' . $tourneyID . '" AND dataKey = "prelimRounds";', $dbLink);
+        $data = mysql_fetch_row($result); $prelimCount = $data[0]; unset($data); @mysql_free_result($result);
+        $maxSize = intval($prelimCount * 100 + 100 + 400); $maxWide = intval($prelimCount + 2);
+        if ($byeRoundFlag) { $maxSize = intval($prelimCount * 100 + 200 + 400); $maxWide = intval($prelimCount + 3); }
+ ?>
+
+<div>
+ <table border="0" width="<?php echo $maxSize; ?>" cellspacing="1em" style="margin-top:25px;">
+ <col width="50" /><?php
+ 
+        for ($indx = 1; $indx <= $prelimCount; $indx++)
+        { echo '<col width="100" />'; }
+        if ($byeRoundFlag) { echo '<col width="150" />'; }
+ 
+ ?><col width="400" />
+
+ <tr>
+ <td width="<?php echo $maxSize; ?>" style="width:<?php echo $maxSize; ?>px;" colspan="<?php echo $maxWide; ?>"><div style="text-align:center;"><span class="redtext18"><em>Team Assignments by Room</em></span></div></td>
+ </tr>
+ <tr>
+ <td width="<?php echo $maxSize; ?>" height="1" style="height:1px;width:<?php echo $maxSize; ?>px;background-color:rgb(100,0,0);" colspan="<?php echo $maxWide; ?>"></td>
+ </tr>
+ <tr>
+ <td width="100" style="width:100px;"><div style="text-align:center;"><span class="redtext12">Room</span></div></td>
+ <?php
+ 
+        if ($byeRoundFlag) { echo '<td width="100" style="width:100px;"><div style="text-align:center;"><span class="redtext12">Bye<br />Round</span></div></td>' . chr(13); }
+        for ($indx = 1; $indx <= $prelimCount; $indx++)
+        { echo '<td width="100" style="width:100px;"><div style="text-align:center;"><span class="redtext12">Prelim<br />Round ' . $indx . '</span></div></td>' . chr(13); }
+ ?>
+    <td width="400" style="width:400px;"><div style="text-align:center;"><span class="redtext12">Judges</span></div></td>
+ </tr>
+ <tr>
+ <td width="<?php echo $maxSize; ?>" height="1" style="height:1px;width:<?php echo $maxSize; ?>px;background-color:rgb(100,0,0);" colspan="<?php echo $maxWide; ?>"></td>
+ </tr>
+ <tr>
+ <td width="<?php echo $maxSize; ?>" height="10" style="height:10px;width:<?php echo $maxSize; ?>px;background-color:transparent;" colspan="<?php echo $maxWide; ?>"></td>
+ </tr>
+ 
+
+<?php
+
+    //  Build lookup tables
+
+    $result = mysql_query('SELECT rooms.id, rooms.roomNumber, buildings.abbr FROM rooms, buildings WHERE rooms.tourney="' . $tourneyID . '" AND buildings.id = rooms.building_ID ORDER BY rooms.id;', $dbLink);
+    for ($indx = 0; $indx < mysql_num_rows($result); $indx++)
+    { @mysql_data_seek($result, $indx); $data = mysql_fetch_row($result); $rooms[$data[0]][0] = $data[1]; $rooms[$data[0]][1] = $data[2]; unset($data); }
+    @mysql_free_result($result);
+
+
+    //  Build the table
+
+    $noColor = true; $cntr = 0;
+    for($indx = 0; $indx < mysql_num_rows($locations); $indx++)
+    {
+            @mysql_data_seek($locations, $indx); $data = mysql_fetch_row($locations); $wo = $data[0]; unset($data);
+            $result = mysql_query('SELECT * FROM rounds WHERE tourney = "' . $tourneyID . '" AND location = "' . $wo . '" ORDER BY round;', $dbLink);
+            if (mysql_num_rows($result) != 0)
+            {
+                $noColor = !$noColor;
+                if (!$noColor) { $color = ' style="background-color:rgb(225,225,225);"'; } else { $color = ''; }
+                echo '<tr' .  $color . '><td style="cell-padding:.2em;text-align:center;"><span class="blktext12">' . $rooms[$wo][0] . ' ' . $rooms[$wo][1] . '</span></td>';
+                if ($byeRoundFlag && mysql_num_rows($result) == $prelimCount)  { echo '<td style="cell-padding:.2em;text-align:center;background-color:white;"></td>'; }
+                for ($indx2 = 0; $indx2 < mysql_num_rows($result); $indx2++)
+                {
+                    @mysql_data_seek($result, $indx2); $round = mysql_fetch_assoc($result);
+                    echo '<td style="text-align:center;"><p class="blktext12">P: T' . sprintf('%02d', $round['team1']) . '<br />R: T' . sprintf('%02d', $round['team2']) . '</p></td>';
+                    unset($round);
+                }
+                echo '<td style="text-align:center;"><br /><p class="blktext12">---------------------------------------------------------------------------------</p><br /><p class="blktext12">---------------------------------------------------------------------------------</p><br /><p class="blktext12">---------------------------------------------------------------------------------</p><br /><p class="blktext12">---------------------------------------------------------------------------------</p></td>';
+                echo '</tr>' . chr(13);
+            }
+            @mysql_free_result($result);
+    }
+    @mysql_free_result($result);
+    
+    @mysql_close($dbLink);
+?>
+
+   <tr>
+     <td width="800" height="20" style="height:20px;width:800px;background-color:transparent;" colspan="8"></td>
+   </tr>
+</table> 
+</div>
+ </body></html>

@@ -1,0 +1,118 @@
+<?php
+
+    include 'common.php';
+
+    $whom = false; $pass = false; $userCode = false;    
+    $userCode = verifySignIn();
+    if (($userCode === false) || ($userCode < 2)) { header('Location: '. $fullPath . '?v=' . $userCode); exit; }
+
+    include 'head_s.shtml';
+
+
+    $dbLink = openConn();
+    $result = mysql_query('SELECT COUNT(*) FROM rounds WHERE tourney = "' . $tourneyID . '" AND location = "-1";', $dbLink);
+    if (mysql_num_rows($result) > 0) { $data = mysql_fetch_row($result); $byeRoundFlag = (($data[0] > 0) || false); unset($data); } else { $byeRoundFlag = false; }
+    @mysql_free_result($result);
+    
+
+ 
+        $result = mysql_query('SELECT data FROM preferences WHERE tourney = "' . $tourneyID . '" AND dataKey = "prelimRounds";', $dbLink);
+        $data = mysql_fetch_row($result); $prelimCount = $data[0]; unset($data); @mysql_free_result($result);
+        $maxSize = intval($prelimCount * 150 + 150); $maxWide = intval($prelimCount + 1);
+        if ($byeRoundFlag) { $maxSize = intval($prelimCount * 150 + 300); $maxWide = intval($prelimCount + 2); }
+ ?>
+
+
+ <table border="0" width="<?php echo $maxSize; ?>" cellspacing="1em" style="margin-top:25px;">
+ <col width="150" /><?php
+ 
+        for ($indx = 1; $indx <= $prelimCount; $indx++)
+        { echo '<col width="150" />'; }
+        if ($byeRoundFlag) { echo '<col width="150" />'; }
+ 
+ ?>
+
+ <tr>
+ <td width="<?php echo $maxSize; ?>" style="width:<?php echo $maxSize; ?>px;" colspan="<?php echo $maxWide; ?>"><div style="margin-bottom:1em;"><span class="blktext10"><a href="<?php echo $fullPathSA; ?>">Back to the admin page</a></span></div></td>
+ </tr>
+ <tr>
+ <td width="<?php echo $maxSize; ?>" style="width:<?php echo $maxSize; ?>px;" colspan="<?php echo $maxWide; ?>"><div style="text-align:center;"><span class="redtext18"><em>Team Assignments</em></span></div></td>
+ </tr>
+ <tr>
+ <td width="<?php echo $maxSize; ?>" height="1" style="height:1px;width:<?php echo $maxSize; ?>px;background-color:rgb(100,0,0);" colspan="<?php echo $maxWide; ?>"></td>
+ </tr>
+ <tr>
+ <td width="150" style="width:150px;"><div style="text-align:center;"><span class="redtext12">Team ID</span></div></td>
+ <?php
+ 
+        $blankRow = '';
+        for ($indx = 1; $indx <= $prelimCount; $indx++)
+        { echo '<td width="150" style="width:150px;"><div style="text-align:center;"><span class="redtext12">Prelim Round ' . $indx . '</span></div></td>' . chr(13); $blankRow .= '<td width="150" style="width:150px;"></td>'; }
+        if ($byeRoundFlag) { echo '<td width="150" style="width:150px;"><div style="text-align:center;"><span class="redtext12">Bye Round</span></div></td>' . chr(13); $blankRow .= '<td width="150" style="width:150px;"></td>'; }
+ ?>
+ </tr>
+ <tr>
+ <td width="<?php echo $maxSize; ?>" height="1" style="height:1px;width:<?php echo $maxSize; ?>px;background-color:rgb(100,0,0);" colspan="<?php echo $maxWide; ?>"></td>
+ </tr>
+ <tr>
+ <td width="<?php echo $maxSize; ?>" height="10" style="height:10px;width:<?php echo $maxSize; ?>px;background-color:transparent;" colspan="<?php echo $maxWide; ?>"></td>
+ </tr>
+ 
+
+<?php
+
+    //  Build lookup tables
+
+    $rTeams = mysql_query('SELECT teams.team_ID, teams.student_ID1, teams.student_ID2, registration.school FROM teams, registration WHERE (teams.tourney="' . $tourneyID . '" AND teams.present="1") AND (registration.tourney="' . $tourneyID . '" AND registration.id=teams.school_ID) ORDER BY team_ID;', $dbLink);
+    for ($indx = 0; $indx < mysql_num_rows($rTeams); $indx++)
+    {
+        @mysql_data_seek($rTeams, $indx); $data = mysql_fetch_row($rTeams);
+        $result2 = mysql_query('SELECT name FROM participants WHERE student_ID = "' . $data[1] . '" AND tourney = "' . $tourneyID . '";', $dbLink);
+        $result3 = mysql_query('SELECT name FROM participants WHERE student_ID = "' . $data[2] . '" AND tourney = "' . $tourneyID . '";', $dbLink);
+        $stu1 = mysql_fetch_row($result2); $stu2 = mysql_fetch_row($result3); $teams[$data[0]][0] = $stu1[0]; $teams[$data[0]][1] = $stu2[0]; $teams[$data[0]][2] = $data[3];
+        @mysql_free_result($result2); @mysql_free_result($result3); unset($data); unset($stu1); unset($stu2);
+    }
+    $result = mysql_query('SELECT rooms.id, rooms.roomNumber, buildings.abbr FROM rooms, buildings WHERE rooms.tourney="' . $tourneyID . '" AND buildings.id = rooms.building_ID ORDER BY rooms.id;', $dbLink);
+    for ($indx = 0; $indx < mysql_num_rows($result); $indx++)
+    { @mysql_data_seek($result, $indx); $data = mysql_fetch_row($result); $rooms[$data[0]][0] = $data[1]; $rooms[$data[0]][1] = $data[2]; unset($data); }
+    @mysql_free_result($result);
+
+
+    //  Build the table
+
+    for($indx = 0; $indx < mysql_num_rows($rTeams); $indx++)
+    {
+            @mysql_data_seek($rTeams, $indx); $data = mysql_fetch_row($rTeams);
+            $result = mysql_query('SELECT round, team1, team2, location FROM rounds WHERE tourney = "' . $tourneyID . '" AND (team1 = "' . $data[0] . '" OR team2 = "' . $data[0] . '") ORDER BY round DESC;', $dbLink);
+            if (($indx % 2) == 0) { $color = ' style="background-color:rgb(225,225,225);"'; } else { $color = ''; }
+            echo '<tr' .  $color . '><td width="150" style="width:150px;cell-padding:.2em;text-align:center;"><p class="blktext10">Team ' . $data[0] . '<br />' . $teams[$data[0]][0] . ' / ' . $teams[$data[0]][1] . '<br />' . $teams[$data[0]][2] . '</p></td>';
+            for ($indx2 = 0; $indx2 < mysql_num_rows($result); $indx2++)
+            {
+                @mysql_data_seek($result, $indx2); $round = mysql_fetch_assoc($result);
+                if ($round['location'] != -1)
+                {
+                    $task = ($data[0] == $round['team1']) ? 'Petitioner' : 'Respondent' ; $opponent = ($data[0] == $round['team1']) ? $round['team2'] : $round['team1'] ;
+                    echo '<td width="150" style="width:150px;text-align:center;"><p class="pblktext10">' . $task . ' vs<br />' . $teams[$opponent][0] . ' / ' . $teams[$opponent][1] . ' (Team ' . $opponent . ' - ' . $teams[$opponent][2] . ')';
+                    if ($round['location'] > 0) { echo '<br />in ' . $rooms[$round['location']][0] . ' ' . $rooms[$round['location']][1]; }
+                    echo '</p></td>';
+                }
+                else
+                {
+                    echo '<td style="text-align:center;"><p class="blktext12">BYE ROUND</p></td>';
+                }
+                unset($round);
+            }
+            if (mysql_num_rows($result) == 0) { echo $blankRow; }
+            if ($byeRoundFlag && mysql_num_rows($result) == $prelimCount)  { echo '<td style="cell-padding:.2em;text-align:center;background-color:white;"></td>'; }
+            echo '</tr>' . chr(13); @mysql_free_result($result);
+    }
+    @mysql_free_result($result);
+    
+    closeConn($dbLink);
+?>
+
+   <tr>
+     <td width="800" height="20" style="height:20px;width:800px;background-color:transparent;" colspan="8"></td>
+   </tr>
+</table> 
+ </body></html>
